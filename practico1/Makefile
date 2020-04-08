@@ -7,17 +7,16 @@ CFLAGS = -g
 
 TARGET = program
 
-all: Ej1.o Ej2.o Ej3.o
-	$(CC) $(CFLAGS) -o main Ej1.o Ej2.o Ej3.o
+all: ej1 ej2 ej3
 
-Ej1.o: Ej1.c
-	$(CC) $(CFLAGS) -c Ej1.c
+ej1: ej1.c
+	$(CC) $(CFLAGS) -o ej1.x ej1.c
 
-Ej2.o: Ej2.c
-	$(CC) $(CFLAGS) -c Ej2.c
+ej2: ej2.c
+	$(CC) $(CFLAGS) -o ej2.x ej2.c
 
-Ej3.o: Ej3.c
-	$(CC) $(CFLAGS) -c Ej3.c
+ej3: ej3.c
+	$(CC) $(CFLAGS) -o ej3.x ej3.c
 
 clean: 
-	$(RM) program *.o .~
+	$(RM) program *.o *.x
