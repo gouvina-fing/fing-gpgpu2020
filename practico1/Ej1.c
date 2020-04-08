@@ -22,10 +22,12 @@ void copia_valores_vector_matriz(int *a, int **m, int N) {
     }
 }
 
+// Ej A) Suma todos los elementos de un vector
 int suma_vector(int *a, int N){
 
 }
 
+// Ej B) Suma todos los elementos que estan almacenados en la diagonal de una matriz (NxN)
 int suma_matriz(int **m, int N){
 
 }

@@ -12,14 +12,26 @@ void random_matriz(float **A, int m, int n) {
                 A[i][j] = (float)rand() / (float)RAND_MAX;
 }
 
+/* Ej A)
+*   Construir la multiplicacion de matrices con el patron de acceso usual (computando C_{ij} antes de avanzar a la siguiente).
+*   Las matrices no tienen porque ser cuadradas.
+*/
 void mult_simple(float ** A, float ** B, float ** C, int m, int p, int n) {
 
 } 
 
+/* Ej B)
+*   Construir la multiplicacion de matrices que acceda por fila tanto a la matriz A como a la matriz B (en lugar de por columna a B)
+*   Las matrices no tienen porque ser cuadradas.
+*/
 void mult_porfilas(float ** A, float ** B, float ** C, int m, int p, int n) {
 
 } 
 
+/* Ej C)
+*   Construir la multiplicacion de matrices "por bloques" de tamanio variable (nb = 64, 128, 256, 512)
+*   Las matrices no tienen porque ser cuadradas.
+*/
 void mult_porbloques(float ** A, float ** B, float ** C, int m, int p, int n, int nb) {
 
 } 

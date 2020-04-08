@@ -17,11 +17,12 @@ void random_matriz(int **m, int N) {
 
 }
 
+// Ej A) Suma todos los elementos de una matriz recorriendo por filas
 int suma_porfilas(int **m, int N) {
 
 } 
 
-
+// Ej B) Suma todos los elementos de una matriz recorriendo por columnas
 int suma_porcolumnas(int **m, int N) {
 
 } 
