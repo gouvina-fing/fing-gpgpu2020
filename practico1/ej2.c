@@ -6,6 +6,7 @@
 
 #define TIME(t_i,t_f) ((double) t_f.tv_sec * 1000.0 + (double) t_f.tv_usec / 1000.0) - \
                       ((double) t_i.tv_sec * 1000.0 + (double) t_i.tv_usec / 1000.0);
+#define RUNS 10
 
 void random_matriz(int **m, int N) {
     for (unsigned int i = 0; i < N; i++)
@@ -69,7 +70,7 @@ void corrida(int N, bool corrida_unica) {
         printf("Tamano: %i, Resultado suma_filas: %i, Tiempo suma_filas:    %f ms\n", N, resSumaFil, t_sgetrf_fila);
         printf("Tamano: %i, Resultado suma_columnas: %i, Tiempo suma_columnas: %f ms\n", N, resSumaCol, t_sgetrf_columna);
     } else {
-        printf("%i,%f,%f\n", N, t_sgetrf_fila, t_sgetrf_columna);
+        printf(",%f,%f", t_sgetrf_fila, t_sgetrf_columna);
     }
 
     // Liberar memoria
@@ -90,7 +91,11 @@ int main(int argc, char *argv[]){
     } else {
         unsigned int vector[] = { 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
         for (unsigned int i = 0; i < sizeof(vector)/sizeof(vector[0]); i++) {
-            corrida(vector[i], corrida_unica);
+            printf("%i", vector[i]);
+            for (unsigned int j = 0; j < RUNS; j++) {
+                corrida(vector[i], corrida_unica);
+            }
+            printf("\n");
         }
     }
 

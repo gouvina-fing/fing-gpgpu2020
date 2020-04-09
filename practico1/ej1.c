@@ -6,6 +6,7 @@
 
 #define TIME(t_i,t_f) ((double) t_f.tv_sec * 1000.0 + (double) t_f.tv_usec / 1000.0) - \
                       ((double) t_i.tv_sec * 1000.0 + (double) t_i.tv_usec / 1000.0);
+#define RUNS 10
 
 void random_vector(int *a, int N) {
     for (unsigned int i = 0; i < N; i++) {
@@ -75,7 +76,7 @@ void corrida(int N, bool corrida_unica) {
         printf("Tamano: %i, Resultado suma_vector: %i, Tiempo suma_vector: %f ms\n", N, resVector, t_sgetrf_vector);
         printf("Tamano: %i, Resultado suma_matriz: %i, Tiempo suma_matriz: %f ms\n", N, resMatriz, t_sgetrf_matriz);
     } else {
-        printf("%i,%f,%f\n", N, t_sgetrf_vector, t_sgetrf_matriz);
+        printf(",%f,%f", t_sgetrf_vector, t_sgetrf_matriz);
     }
 
     // Liberar memoria
@@ -96,7 +97,11 @@ int main(int argc, char *argv[]){
     } else {
         unsigned int vector[] = { 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
         for (unsigned int i = 0; i < sizeof(vector)/sizeof(vector[0]); i++) {
-            corrida(vector[i], corrida_unica);
+            printf("%i", vector[i]);
+            for (unsigned int j = 0; j < RUNS; j++) {
+                corrida(vector[i], corrida_unica);
+            }
+            printf("\n");
         }
     }
 
