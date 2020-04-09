@@ -15,26 +15,77 @@ void random_matriz(float **A, int m, int n) {
 /* Ej A)
 *   Construir la multiplicacion de matrices con el patron de acceso usual (computando C_{ij} antes de avanzar a la siguiente).
 *   Las matrices no tienen porque ser cuadradas.
+*   C = A x B. C_{ij} = Sum{k=1}{p}(A_{ik} x B_{kj})
 */
 void mult_simple(float ** A, float ** B, float ** C, int m, int p, int n) {
+    // Initializing elements of matrix C to 0.
+    for (unsigned int i = 0; i < m; ++i)
+        for (unsigned int j = 0; j < n; ++j)
+            C[i][j] = 0;
 
-} 
+    // Multiplying A and B and storing in C.
+    for (unsigned int i = 0; i < m; ++i) {
+        for (unsigned int j = 0; j < n; ++j) {
+            for (unsigned int k = 0; k < p; ++k) {
+                C[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+}
 
 /* Ej B)
 *   Construir la multiplicacion de matrices que acceda por fila tanto a la matriz A como a la matriz B (en lugar de por columna a B)
 *   Las matrices no tienen porque ser cuadradas.
+*   C = A x B. C_{ij} = Sum{k=1}{p}(A_{ik} x B_{kj})
 */
 void mult_porfilas(float ** A, float ** B, float ** C, int m, int p, int n) {
+    // Initializing elements of matrix mult to 0.
+    for (unsigned int i = 0; i < m; ++i)
+        for (unsigned int j = 0; j < n; ++j)
+            C[i][j] = 0;
 
-} 
+    // Multiplying A and B and storing in C.
+    for (unsigned int i = 0; i < m; ++i) {
+        for (unsigned int k = 0; k < p; ++k) {
+            for (unsigned int j = 0; j < n; ++j) {
+                C[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+}
 
 /* Ej C)
 *   Construir la multiplicacion de matrices "por bloques" de tamanio variable (nb = 64, 128, 256, 512)
 *   Las matrices no tienen porque ser cuadradas.
+*   C = A x B. C_{ij} = Sum{k=1}{p}(A_{ik} x B_{kj})
 */
 void mult_porbloques(float ** A, float ** B, float ** C, int m, int p, int n, int nb) {
+    int blockSize = nb;
 
-} 
+    // Initializing elements of matrix mult to 0.
+    for (unsigned int i = 0; i < m; ++i)
+        for (unsigned int j = 0; j < n; ++j)
+            C[i][j] = 0;
+
+    for (unsigned int bi=0; bi<m; bi+=blockSize)
+        for (unsigned int bj=0; bj<n; bj+=blockSize)
+            for (unsigned int bk=0; bk<p; bk+=blockSize)
+                for (unsigned int i=0; i<blockSize; i++)
+                    for (unsigned int j=0; j<blockSize; j++)
+                        for (unsigned int k=0; k<blockSize; k++)
+                            C[bi+i][bj+j] += A[bi+i][bk+k]*B[bk+k][bj+j];
+}
+
+// Helper for debugging
+void print_matrix(float ** C, int m, int n) {
+    for (unsigned int i = 0; i < m; ++i) {
+        printf("[");
+        for (unsigned int j = 0; j < n; ++j)
+            printf("%f, ", C[i][j]);
+        printf("]\n");
+    }
+    printf("\n\n");
+}
 
 int main(int argc, char *argv[]){
 
@@ -85,9 +136,9 @@ int main(int argc, char *argv[]){
     gettimeofday(&t_f, NULL);
     double t_gemm_bloq = TIME(t_i,t_f);
 
-    printf("Tamanho: (%i,%i,%i,%i) Tiempo fila:    %f ms\n", m, n, p, nb, t_gemm_simple);
-    printf("Tamanho: (%i,%i,%i,%i) Tiempo fila:    %f ms\n", m, n, p, nb, t_gemm_fil   );
-    printf("Tamanho: (%i,%i,%i,%i) Tiempo columna: %f ms\n", m, n, p, nb, t_gemm_bloq  );
+    printf("Tamano: (%i,%i,%i,%i) Tiempo fila:    %f ms\n", m, n, p, nb, t_gemm_simple);
+    printf("Tamano: (%i,%i,%i,%i) Tiempo fila:    %f ms\n", m, n, p, nb, t_gemm_fil   );
+    printf("Tamano: (%i,%i,%i,%i) Tiempo columna: %f ms\n", m, n, p, nb, t_gemm_bloq  );
 
     for (int i = 0; i < m; ++i) free(A[i]);
     free(A);
