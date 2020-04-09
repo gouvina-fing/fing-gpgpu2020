@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <math.h>
 #include <sys/time.h>
 
@@ -40,15 +41,8 @@ int suma_matriz(int **m, int N){
     return res;
 }
 
-
-int main(int argc, char *argv[]){
-
-    // Lectura de parametros
-    if (argc < 2) {
-       printf("No se indico el tamaño \n");
-       exit(1);
-    }
-    unsigned int N = atoi(argv[1]);
+// Aux: Corrida única
+void corrida(int N, bool corrida_unica) {
 
     // Generar vector
     int * vector = (int*) malloc(N*sizeof(int)); 
@@ -65,27 +59,46 @@ int main(int argc, char *argv[]){
 
     struct timeval t_i, t_f;
 
-    // Evaluacion de suma_vector
+    // Evaluar tiempo de suma_vector
     gettimeofday(&t_i, NULL);
     int resVector = suma_vector(vector,N); 
     gettimeofday(&t_f, NULL);
     double t_sgetrf_vector = TIME(t_i,t_f);
 
-    // Evaluacion de suma_matriz
+    // Evaluar tiempo de suma_matriz
     gettimeofday(&t_i, NULL);
     int resMatriz = suma_matriz(matriz,N);
     gettimeofday(&t_f, NULL);
     double t_sgetrf_matriz = TIME(t_i,t_f);
 
-    printf("Tamano: %i, Resultado suma_vector: %i, Tiempo suma_vector: %f ms\n", N, resVector, t_sgetrf_vector);
-    printf("Tamano: %i, Resultado suma_matriz: %i, Tiempo suma_matriz: %f ms\n", N, resMatriz, t_sgetrf_matriz);
+    if (corrida_unica) {
+        printf("Tamano: %i, Resultado suma_vector: %i, Tiempo suma_vector: %f ms\n", N, resVector, t_sgetrf_vector);
+        printf("Tamano: %i, Resultado suma_matriz: %i, Tiempo suma_matriz: %f ms\n", N, resMatriz, t_sgetrf_matriz);
+    } else {
+        printf("%i,%f,%f\n", N, t_sgetrf_vector, t_sgetrf_matriz);
+    }
 
-    // Liberacion de memoria
+    // Liberar memoria
     for (int i = 0; i < N; ++i) {
         free(matriz[i]);
     }
     free(matriz);
     free(vector);
+}
+
+int main(int argc, char *argv[]){
+
+    // Leer parametros
+    bool corrida_unica = argc > 1;
+ 
+    if (corrida_unica) {
+        corrida(atoi(argv[1]), corrida_unica);
+    } else {
+        unsigned int vector[] = { 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
+        for (unsigned int i = 0; i < sizeof(vector)/sizeof(vector[0]); i++) {
+            corrida(vector[i], corrida_unica);
+        }
+    }
 
     return 0;
 }

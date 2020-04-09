@@ -19,4 +19,7 @@ ej3: ej3.c
 	$(CC) $(CFLAGS) -o ej3.x ej3.c
 
 clean: 
-	$(RM) program *.o *.x
+	$(RM) *.o *.x
+
+clean_data:
+	$(RM) *.csv
