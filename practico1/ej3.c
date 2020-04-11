@@ -194,16 +194,16 @@ int main(int argc, char *argv[]){
         inicializar_matrices(&A, &B, &C, m, p, n);
 
         // Evaluar tiempo de mult_simpĺe
-        double t_gemm_simple = corrida_simple(A,B,C,m,p,n);
+        //double t_gemm_simple = corrida_simple(A,B,C,m,p,n);
 
         // Evaluar tiempo de mult_por_filas
-        double t_gemm_fil = corrida_por_filas(A,B,C,m,p,n);
+        //double t_gemm_fil = corrida_por_filas(A,B,C,m,p,n);
 
         // Evaluar tiempo de mult_por_bloques
         double t_gemm_bloq = corrida_por_bloques(A,B,C,m,p,n,nb);
 
-        printf("Tamano: (%i,%i,%i,%i) Tiempo simple:    %f ms\n", m, n, p, nb, t_gemm_simple);
-        printf("Tamano: (%i,%i,%i,%i) Tiempo filas:    %f ms\n", m, n, p, nb, t_gemm_fil);
+        //printf("Tamano: (%i,%i,%i,%i) Tiempo simple:    %f ms\n", m, n, p, nb, t_gemm_simple);
+        //printf("Tamano: (%i,%i,%i,%i) Tiempo filas:    %f ms\n", m, n, p, nb, t_gemm_fil);
         printf("Tamano: (%i,%i,%i,%i) Tiempo bloques: %f ms\n", m, n, p, nb, t_gemm_bloq);
 
         liberar_matrices(&A, &B, &C, m, p, n);

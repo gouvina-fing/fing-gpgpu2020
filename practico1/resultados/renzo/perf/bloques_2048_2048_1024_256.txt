@@ -1,27 +1,27 @@
-# started on Sat Apr 11 15:59:54 2020
+# started on Sat Apr 11 17:54:29 2020
 
 
  Performance counter stats for './ej3.x 2048 2048 1024 256':
 
-            494,52 msec task-clock                #    0,993 CPUs utilized          
-               148      context-switches          #    0,299 K/sec                  
-                 0      cpu-migrations            #    0,000 K/sec                  
-             8.280      page-faults               #    0,017 M/sec                  
-     1.993.729.711      cycles                    #    4,032 GHz                      (49,25%)
-         6.111.409      stalled-cycles-frontend   #    0,31% frontend cycles idle     (50,07%)
-       687.265.958      stalled-cycles-backend    #   34,47% backend cycles idle      (50,83%)
-     8.909.771.893      instructions              #    4,47  insn per cycle         
-                                                  #    0,08  stalled cycles per insn  (50,85%)
-     1.140.071.734      branches                  # 2305,412 M/sec                    (50,96%)
-         2.262.837      branch-misses             #    0,20% of all branches          (50,75%)
-     3.384.708.196      L1-dcache-loads           # 6844,436 M/sec                    (49,93%)
-       276.694.892      L1-dcache-load-misses     #    8,17% of all L1-dcache hits    (49,17%)
-        12.540.432      L1-icache-loads           #   25,359 M/sec                    (49,15%)
-           100.046      L1-icache-load-misses     #    0,80% of all L1-icache hits    (49,04%)
+          2.558,04 msec task-clock                #    1,000 CPUs utilized          
+               239      context-switches          #    0,093 K/sec                  
+                 1      cpu-migrations            #    0,000 K/sec                  
+             8.281      page-faults               #    0,003 M/sec                  
+    10.504.456.821      cycles                    #    4,106 GHz                      (49,98%)
+        98.306.446      stalled-cycles-frontend   #    0,94% frontend cycles idle     (49,98%)
+     1.291.416.050      stalled-cycles-backend    #   12,29% backend cycles idle      (49,98%)
+    39.001.331.532      instructions              #    3,71  insn per cycle         
+                                                  #    0,03  stalled cycles per insn  (49,98%)
+     4.368.716.633      branches                  # 1707,836 M/sec                    (49,99%)
+        17.014.014      branch-misses             #    0,39% of all branches          (50,02%)
+    17.363.392.991      L1-dcache-loads           # 6787,768 M/sec                    (50,02%)
+       366.701.589      L1-dcache-load-misses     #    2,11% of all L1-dcache hits    (50,02%)
+         7.676.198      L1-icache-loads           #    3,001 M/sec                    (50,02%)
+           104.629      L1-icache-load-misses     #    1,36% of all L1-icache hits    (50,01%)
 
-       0,498041069 seconds time elapsed
+       2,559281363 seconds time elapsed
 
-       0,482722000 seconds user
-       0,011968000 seconds sys
+       2,550130000 seconds user
+       0,008006000 seconds sys
 
 
