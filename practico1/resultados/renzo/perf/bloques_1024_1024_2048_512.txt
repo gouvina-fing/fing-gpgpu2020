@@ -1,0 +1,27 @@
+# started on Sat Apr 11 15:59:57 2020
+
+
+ Performance counter stats for './ej3.x 1024 1024 2048 512':
+
+            254,26 msec task-clock                #    0,999 CPUs utilized          
+                24      context-switches          #    0,094 K/sec                  
+                 0      cpu-migrations            #    0,000 K/sec                  
+             5.202      page-faults               #    0,020 M/sec                  
+     1.039.683.368      cycles                    #    4,089 GHz                      (47,27%)
+         4.194.348      stalled-cycles-frontend   #    0,40% frontend cycles idle     (48,84%)
+       317.240.693      stalled-cycles-backend    #   30,51% backend cycles idle      (50,42%)
+     4.657.198.864      instructions              #    4,48  insn per cycle         
+                                                  #    0,07  stalled cycles per insn  (52,00%)
+       596.837.060      branches                  # 2347,323 M/sec                    (52,83%)
+         2.206.902      branch-misses             #    0,37% of all branches          (52,73%)
+     1.748.028.613      L1-dcache-loads           # 6874,887 M/sec                    (51,16%)
+       133.181.416      L1-dcache-load-misses     #    7,62% of all L1-dcache hits    (49,58%)
+         6.165.062      L1-icache-loads           #   24,247 M/sec                    (48,00%)
+            29.968      L1-icache-load-misses     #    0,49% of all L1-icache hits    (47,17%)
+
+       0,254604977 seconds time elapsed
+
+       0,250550000 seconds user
+       0,003976000 seconds sys
+
+
