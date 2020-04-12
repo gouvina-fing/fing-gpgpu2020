@@ -3,7 +3,7 @@ CC = gcc
 # Compiler flags:
 #  -g    adds debugging information to the executable file
 #  -Wall turns on most, but not all, compiler warnings
-CFLAGS = -g
+CFLAGS = -g -o3
 
 TARGET = program
 
