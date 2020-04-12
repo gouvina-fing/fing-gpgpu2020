@@ -3,9 +3,7 @@ CC = gcc
 # Compiler flags:
 #  -g    adds debugging information to the executable file
 #  -Wall turns on most, but not all, compiler warnings
-CFLAGS = -g -o3
-
-TARGET = program
+CFLAGS = -g -O3
 
 all: ej1 ej2 ej3
 
@@ -20,6 +18,3 @@ ej3: ej3.c
 
 clean: 
 	$(RM) *.o *.x
-
-clean_data:
-	$(RM) *.csv

@@ -20,24 +20,24 @@ void random_matriz(int **m, int N) {
 
 // Ej A) Suma todos los elementos de una matriz recorriendo por filas
 int suma_porfilas(int **m, int N) {
-    int res = 0;
-    for (unsigned int i = 0; i < N; i++) {
+    int result = 0;
+    for (unsigned int i = 0; i < N; i++) 
         for (unsigned int j = 0; j < N; j++) {
-            res = res + m[i][j];
+            result += m[i][j];
         }
-    }
-    return res;
+    
+    return result;
 } 
 
 // Ej B) Suma todos los elementos de una matriz recorriendo por columnas
 int suma_porcolumnas(int **m, int N) {
-    int res = 0;
-    for (unsigned int i = 0; i < N; i++) {
+    int result = 0;
+    for (unsigned int i = 0; i < N; i++) 
         for (unsigned int j = 0; j < N; j++) {
-            res = res + m[j][i];
+            result += m[j][i];
         }
-    }
-    return res;
+    
+    return result;
 }
 
 // Aux: Corrida única

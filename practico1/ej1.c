@@ -26,20 +26,20 @@ void copia_valores_vector_matriz(int *a, int **m, int N) {
 
 // Ej A) Suma todos los elementos de un vector
 int suma_vector(int *a, int N){
-    int res = 0;
+    int result = 0;
     for (unsigned int i = 0; i < N; i++) {
-        res = res + a[i];
+        result += + a[i];
     }
-    return res;
+    return result;
 }
 
 // Ej B) Suma todos los elementos que estan almacenados en la diagonal de una matriz (NxN)
 int suma_matriz(int **m, int N){
-    int res = 0;
+    int result = 0;
     for (unsigned int i = 0; i < N; i++) {
-        res = res + m[i][i];
+        result += m[i][i];
     }
-    return res;
+    return result;
 }
 
 // Aux: Corrida única
