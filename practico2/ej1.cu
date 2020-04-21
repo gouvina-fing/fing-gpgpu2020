@@ -3,6 +3,7 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
+// Macro para wrappear funciones de cuda e interceptar errores
 #define CUDA_CHK(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true) {
    if (code != cudaSuccess) {
@@ -23,7 +24,7 @@ int get_text_length(const char * fname);
 #define M 256 // Cantidad de caracteres en la tabla ASCII extendida
 #define A_MMI_M -17 // A^{-1}. Inverso multiplicativo de A modulo M
 
-// El operador mod no es el mismo que ( %) para números negativos, por lo que se provee una función módulo en el código.
+// El operador mod no es el mismo que (%) para números negativos, por lo que se provee una función módulo en el código.
 __device__ int modulo(int a, int b) {
     int r = a % b;
     r = (r < 0) ? r + b : r;
@@ -37,6 +38,8 @@ __global__ void decrypt_kernel(int *d_message, int length) {
 }
 
 /*
+.  Normalmente: For recorriendo todo el texto usando D(x)
+.
 .  Como cada caracter puede ser encriptado y desencriptado de forma independiente podemos utilizar la
 .  GPU para desencriptar el texto en paralelo. Para esto debemos lanzar un kernel que realice el desencriptado,
 .  asignando un thread por caracter
@@ -67,13 +70,21 @@ int main(int argc, char *argv[]) {
     read_file(fname, h_message);
 
     // Reservo memoria en la GPU
+    // Usando la macro ej: CUDA_CHK(cudaMalloc(...));
 
     // Copio los datos a la memoria de la GPU
 
     /* Configuro la grilla de threads
-    .  Ej1: 1 bloque de n threads (tamaño de bloque a elección).
+    .  Ej1: 1 bloque de n threads (tamaño de bloque a elección nuestra más de 1024 supera el límite de CUDA).
+    .       Limitante que tendremos, ejecutando un solo bloque de 1024 threads como máximo podremos desencriptar solo 1024 caracteres
     .  Ej2: Varios bloques, procesando textos de largo arbitrario.
+    .       Extendemos la parte 1 para que el kernel pueda usar varios bloques (tantos como sea necesario para desencriptar todo el texto)
+    .       En cuda podemos ejecutar hasta millones de bloques en la dimensión x (esto es unidimensional)
+    .       Definimos la cantidad de bloques a usar en base al largo del texto (Esta es la forma que se trabaja en realidad)
     .  Ej3: Cantidad fija de bloques (ej 128) para procesar textos de largo arbitrario.
+    .       Se fijan los bloques como limitante. Tendremos tantos hilos como 128 * cantHilosPorBloque
+    .       Por lo que para procesar textos largos habrá que hacer algo secuencial, haciendo que cada hilo desencripte más de un caracter.
+    .       Esto no es ideal en entorno cuda, es suboptimo a la parte 2 y al principio de que el codigo a ejecutar sea simple, pero este ejercicio es puramente didactico. 
     */
 
     // Ejecuto el kernel
