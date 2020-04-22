@@ -1,3 +1,5 @@
+// Invocar como: './practico_sol nombre_archivo, ejercicio'. En donde ejercicio es 1, 2 o 3.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "cuda_runtime.h"
