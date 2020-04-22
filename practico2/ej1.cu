@@ -33,23 +33,23 @@ __device__ int modulo(int a, int b) {
 
 // TODO: Implementar el kernel decrypt_kernel utilizando un solo bloque de threads (en la dimensión x).
 //		 A, B y M están definidas en el código como macros.
-__global__ void decrypt_kernel(int *d_message, int length) {
-
+// Para resolver los ejercicios deberá utilizar las variables especiales: threadIdx.x, blockIdx.x, blockDim.x y gridDim.x
+__global__ void decrypt_kernel(int *device_message, int length) {
+    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if(index < length) {
+        device_message[index] = modulo(A_MMI_M*(device_message[index] - B), M);
+    }
 }
 
 /*
 .  Normalmente: For recorriendo todo el texto usando D(x)
-.
 .  Como cada caracter puede ser encriptado y desencriptado de forma independiente podemos utilizar la
 .  GPU para desencriptar el texto en paralelo. Para esto debemos lanzar un kernel que realice el desencriptado,
 .  asignando un thread por caracter
-.
-.  Para resolver los ejercicios deberá utilizar las variables especiales:
-.  threadIdx.x, blockIdx.x, blockDim.x y gridDim.x
 */ 
 int main(int argc, char *argv[]) {
-    int *h_message;
-    int *d_message;
+    int *host_message;
+    int *device_message;
     unsigned int size;
     int i;
 
@@ -64,15 +64,16 @@ int main(int argc, char *argv[]) {
     size = length * sizeof(int);
 
     // Reservo memoria para el mensaje
-    h_message = (int *)malloc(size);
+    host_message = (int *)malloc(size);
 
     // Leo el archivo de la entrada
-    read_file(fname, h_message);
+    read_file(fname, host_message);
 
     // Reservo memoria en la GPU
-    // Usando la macro ej: CUDA_CHK(cudaMalloc(...));
+    CUDA_CHK(cudaMalloc((void**)& device_message, size));
 
     // Copio los datos a la memoria de la GPU
+    CUDA_CHK(cudaMemcpy(device_message, host_message, size, cudaMemcpyHostToDevice)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
 
     /* Configuro la grilla de threads
     .  Ej1: 1 bloque de n threads (tamaño de bloque a elección nuestra más de 1024 supera el límite de CUDA).
@@ -86,21 +87,33 @@ int main(int argc, char *argv[]) {
     .       Por lo que para procesar textos largos habrá que hacer algo secuencial, haciendo que cada hilo desencripte más de un caracter.
     .       Esto no es ideal en entorno cuda, es suboptimo a la parte 2 y al principio de que el codigo a ejecutar sea simple, pero este ejercicio es puramente didactico. 
     */
+    int block_size = 1024;
+    // Ej 1: (no procesa más de 1024 caracteres)
+    // int bloques = 1
+    // Ej2:
+    int bloques = length/block_size + (length % block_size != 0); // Division with ceiling
+    
+    // TODO: Cómo es esto de dim3? (tipo ya sé que es, y la usan en las ppts, tiene sentido usarla para arrays, no encontré ejemplos de arrays unidimensionales que lo usen)
+    dim3 tamGrid(bloques, 1); // Grid dimension
+    dim3 tamBlock(block_size, 1, 1); // Block dimension
 
     // Ejecuto el kernel
+    decrypt_kernel<<<tamGrid, tamBlock>>>(device_message, length);
 
     // Copio los datos nuevamente a la memoria de la CPU
+    CUDA_CHK(cudaMemcpy(host_message, device_message, size, cudaMemcpyDeviceToHost)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
 
     // Despliego el mensaje
     for (int i = 0; i < length; i++) {
-        printf("%c", (char)h_message[i]);
+        printf("%c", (char)host_message[i]);
     }
     printf("\n");
 
     // Libero la memoria en la GPU
+    CUDA_CHK(cudaFree(device_message));
 
     // Libero la memoria en la CPU
-    free(h_message);
+    free(host_message);
 
     return 0;
 }
