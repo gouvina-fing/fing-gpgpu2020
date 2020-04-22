@@ -53,15 +53,6 @@ __global__ void decrypt_kernel_ej3(int *device_message, int char_per_block, int 
     }
 }
 
-__global__ void old_ecrypt_kernel_ej3(int *device_message, int char_per_block, int length) {
-    int index = (blockIdx.x*blockDim.x + threadIdx.x)*char_per_block;
-    for(int i = char_per_block; i > 0; --i) {
-        if(index - i < length) {
-            device_message[index - i] = modulo(A_MMI_M*(device_message[index - i] - B), M);
-        }
-    }
-}
-
 /*
 .  Normalmente se resolvería con un for recorriendo todo el texto usando D(x)
 .  Como cada caracter puede ser encriptado y desencriptado de forma independiente podemos utilizar la GPU para desencriptar el texto en paralelo.
