@@ -8,7 +8,9 @@ Tareas del curso de Computación de Propósito General en Unidades de Procesamie
 
 ### Prerequisites
 - Recommended Drivers of your NVIDIA video card: `sudo ubuntu-drivers autoinstall`
-- Nvidia Container Runtime: `sudo apt-get install nvidia-container-runtime`
+- Nvidia Container Runtime:
+    - Add the repository [following the instructions](https://nvidia.github.io/nvidia-container-runtime/)
+    - After doing `sudo apt-get update`, install the Container Runtime: `sudo apt-get install nvidia-container-runtime`
 
 ### Build the image and name it gpgpu
 `docker image build -t gpgpu .`
