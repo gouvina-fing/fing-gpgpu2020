@@ -6,6 +6,15 @@
 
 using namespace std;
 
+// Macro para wrappear funciones de cuda e interceptar errores
+#define CUDA_CHK(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true) {
+   if (code != cudaSuccess) {
+      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+      if (abort) exit(code);
+   }
+}
+
 // Ej 2a) Kernel que aplica el filtro Gaussiano en la GPU
 __global__ void blur_kernel(float* d_input, int width, int height, float* d_output, float* d_msk, int m_size) {
 
