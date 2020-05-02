@@ -18,7 +18,7 @@ int main(int argc, char** argv){
 		path = argv[argc-1];
 
 
-    // Inicializamos la mascara
+    // Inicializamos la mascara. El color del pixel original se conserva (más peso), pero los pixeles vecinos inciden en su valor en menor medida
     float mascara[25]={1, 4, 6, 4, 1,
                        4,16,24,16, 4,
                        6,24,36,24, 6,

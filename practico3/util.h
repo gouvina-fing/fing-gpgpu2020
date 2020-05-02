@@ -5,6 +5,16 @@
 #include "cuda_runtime.h"
 /*#include <Windows.h>*/
 
+	// Macro para wrappear funciones de cuda e interceptar errores
+	#define CUDA_CHK(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+		inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true) {
+		if (code != cudaSuccess) {
+			fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+			if (abort) exit(code);
+		}
+	}
+
+	// Estas 4 macros miden tiempo definiendo eventos con mecanismos internos de la GPU y la API de CUDA
 	#define CLK_CUEVTS_INIT \
 		cudaEvent_t evt_start, evt_stop; \
 		printf("Usando CUDA EVENTS para medir el tiempo\n"); \
@@ -12,9 +22,11 @@
 		cudaEventCreate(&evt_start); \
 		cudaEventCreate(&evt_stop) ;
 
+	// Empieza a escuchar el evento
 	#define CLK_CUEVTS_START \
         cudaEventRecord(evt_start, 0);
 
+	// Bloquea hasta que ocurre el evento
 	#define CLK_CUEVTS_STOP \
         cudaEventRecord(evt_stop, 0); \
         cudaEventSynchronize(evt_stop) 
@@ -24,6 +36,7 @@
 		t_elap = (cudaEventElapsedTime( &t_elap, evt_start, evt_stop ))?0:t_elap;
 
 
+	// Estas 4 macros miden tiempos usando get time of day
 	#define CLK_POSIX_INIT \
 		printf("Usando gettimeofday para medir el tiempo\n"); \
 		struct timeval t_i, t_f; \

@@ -6,15 +6,6 @@
 
 using namespace std;
 
-// Macro para wrappear funciones de cuda e interceptar errores
-#define CUDA_CHK(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true) {
-   if (code != cudaSuccess) {
-      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-      if (abort) exit(code);
-   }
-}
-
 // Ej 2a) Kernel que aplica el filtro Gaussiano en la GPU
 __global__ void blur_kernel(float* d_input, int width, int height, float* d_output, float* d_msk, int m_size) {
 
@@ -46,7 +37,7 @@ void ajustar_brillo_gpu(float * img_in, int width, int height, float * img_out, 
 
     // TODO: Ej 1b) Registrar tiempos de cada etapa de ajustar_brillo_gpu para las dos variantes. Discutir diferencia entre variantes.
     //              (tiempos, reserva de memoria, transferencia de datos, ejecución del kernel, etc)
-    //              Usar util.h
+    //              Usar ambos mecanismo de medidas de utils.h (deberian dar casi igual)
 
     // TODO: Ej 1c) Compare los resultados de la salidad de nvprof.
     //              Registrar con nvprof --profileapi-trace none --metrics gld_efficiency ./blur imagen.ppm
@@ -72,6 +63,7 @@ void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[
     // Transferir resultado a la memoria principal
 
     // TODO: Ej 2b) Registre los tiempos de cada etapa de la función y compare las variantes de CPU y GPU.
+    //              Usar ambos mecanismo de medidas de utils.h (deberian dar casi igual)
     //              ¿Qué aceleración se logra? ¿Y considerando únicamente el tiempo del kernel (cudaMemcpy tiene mucho overhead!)?
     //              Duda: Esto se hace acá o en main.cpp?
 
@@ -117,7 +109,8 @@ void blur_cpu(float * img_in, int width, int height, float * img_out, float msk[
                     int ix =imgx + i - m_size/2;
                     int iy =imgy + j - m_size/2;
                     
-                    if(ix >= 0 && ix < width && iy>= 0 && iy < height )
+                    // Altera el valor de un pixel, según sus vecinos.
+                    if(ix >= 0 && ix < width && iy>= 0 && iy < height)
                         val_pixel = val_pixel +  img_in[iy * width +ix] * msk[i*m_size+j];
                 }
             }
