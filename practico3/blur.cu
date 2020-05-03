@@ -3,24 +3,37 @@
 #include "cuda.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include <algorithm>    // std::min std::max
 
 using namespace std;
 
+// CUDA Thread Indexing Cheatsheet https://cs.calvin.edu/courses/cs/374/CUDA/CUDA-Thread-Indexing-Cheatsheet.pdf
+
 // Ej 2a) Kernel que aplica el filtro Gaussiano en la GPU
+// Ejemplo filtro https://www.nvidia.com/content/nvision2008/tech_presentations/Game_Developer_Track/NVISION08-Image_Processing_and_Video_with_CUDA.pdf
+// Ejemplo multiplicacion de matrices http://selkie.macalester.edu/csinparallel/modules/GPUProgramming/build/html/CUDA2D/CUDA2D.html
 __global__ void blur_kernel(float* d_input, int width, int height, float* d_output, float* d_msk, int m_size) {
 
 }
 
 // Ej 1a) Threads con índice consecutivo en la dirección x deben acceder a pixels de una misma fila de la imagen.
-//        Es importante usar blockIdx y threadIdx adecuadamente para acceder a la estructura bidimensional.
+//        Es importante usar blockIdx.x, blockIdx.y, threadIdx.x y threadIdx.y adecuadamente para acceder a la estructura bidimensional.
 __global__ void ajustar_brillo_coalesced_kernel(float* d_input, float* d_output, int width, int height, float coef) {
-
+    int imgx = (blockIdx.x * blockDim.x) + theadIdx.x;
+    int imgy = (blockIdx.y * blockDim.y) + theadIdx.y;
+    if (x < width && y < height) {
+        d_output[(imgy*width) + imgx] = min(255.0f, max(0.0f, d_input[(imgy*width) + imgx] + coef));
+    }
 }
 
 // Ej 1a) Threads con índice consecutivo en la dirección x deben acceder a pixels de una misma columna de la imagen.
 //        Es importante usar blockIdx y threadIdx adecuadamente para acceder a la estructura bidimensional.
 __global__ void ajustar_brillo_no_coalesced_kernel(float* d_input, float* d_output, int width, int height, float coef) {
-
+    int imgx = (blockIdx.x * blockDim.x) + theadIdx.x;
+    int imgy = (blockIdx.y * blockDim.y) + theadIdx.y;
+    if (x < width && y < height) {
+        d_output[(imgx*height) + imgy] = min(255.0f, max(0.0f, d_input[(imgx*height) + imgy] + coef));
+    }
 }
 
 // Procesa la img en GPU sumando un coeficiente entre -255 y 255 a cada píxel, aumentando o reduciendo su brillo.
