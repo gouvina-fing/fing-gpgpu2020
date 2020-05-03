@@ -19,9 +19,9 @@ __global__ void blur_kernel(float* d_input, int width, int height, float* d_outp
 // Ej 1a) Threads con índice consecutivo en la dirección x deben acceder a pixels de una misma fila de la imagen.
 //        Es importante usar blockIdx.x, blockIdx.y, threadIdx.x y threadIdx.y adecuadamente para acceder a la estructura bidimensional.
 __global__ void ajustar_brillo_coalesced_kernel(float* d_input, float* d_output, int width, int height, float coef) {
-    int imgx = (blockIdx.x * blockDim.x) + theadIdx.x;
-    int imgy = (blockIdx.y * blockDim.y) + theadIdx.y;
-    if (x < width && y < height) {
+    int imgx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    int imgy = (blockIdx.y * blockDim.y) + threadIdx.y;
+    if (imgx < width && imgy < height) {
         d_output[(imgy*width) + imgx] = min(255.0f, max(0.0f, d_input[(imgy*width) + imgx] + coef));
     }
 }
@@ -29,24 +29,58 @@ __global__ void ajustar_brillo_coalesced_kernel(float* d_input, float* d_output,
 // Ej 1a) Threads con índice consecutivo en la dirección x deben acceder a pixels de una misma columna de la imagen.
 //        Es importante usar blockIdx y threadIdx adecuadamente para acceder a la estructura bidimensional.
 __global__ void ajustar_brillo_no_coalesced_kernel(float* d_input, float* d_output, int width, int height, float coef) {
-    int imgx = (blockIdx.x * blockDim.x) + theadIdx.x;
-    int imgy = (blockIdx.y * blockDim.y) + theadIdx.y;
-    if (x < width && y < height) {
+    int imgx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    int imgy = (blockIdx.y * blockDim.y) + threadIdx.y;
+    if (imgx < width && imgy < height) {
         d_output[(imgx*height) + imgy] = min(255.0f, max(0.0f, d_input[(imgx*height) + imgy] + coef));
     }
 }
 
 // Procesa la img en GPU sumando un coeficiente entre -255 y 255 a cada píxel, aumentando o reduciendo su brillo.
-void ajustar_brillo_gpu(float * img_in, int width, int height, float * img_out, float coef, int filas=1) {
-    
-    // Reservar memoria en la GPU
+void ajustar_brillo_gpu(float * img_in, int width, int height, float * img_out, float coef, int algorithm, int filas=1) {
 
-    // Copiar imagen y máscara a la GPU
+    // Tamaño de img_in en memoria
+    unsigned int size = width * height * sizeof(float);
+    float * device_img_in = (float *)malloc(size);
+    float * device_img_out = (float *)malloc(size);
+
+    // Reservo memoria en la GPU
+    CUDA_CHK(cudaMalloc((void**)& device_img_in, size));
+    CUDA_CHK(cudaMalloc((void**)& device_img_out, size));
+
+    // Copio los datos a la memoria de la GPU
+    CUDA_CHK(cudaMemcpy(device_img_in, img_in, size, cudaMemcpyHostToDevice)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
    
     // Configurar grilla y lanzar kernel
     // TODO: La grilla (bidimensional) de threads debe estar configurada para aceptar matrices de cualquier tamaño.
-    
+    int block_size = 32;
+    int block_amount_x = width / block_size + (width % block_size != 0); // Division with ceiling
+    int block_amount_y = height / block_size + (height % block_size != 0); // Division with ceiling
+
+    dim3 tamGrid(block_amount_x, block_amount_y); // Grid dimension
+    dim3 tamBlock(block_size, block_size); // Block dimension
+
+    // Lanzar kernel
+    CLK_POSIX_INIT;
+    CLK_POSIX_START;
+
+    switch(algorithm) {
+        case 1:
+            ajustar_brillo_coalesced_kernel<<<tamGrid, tamBlock>>>(device_img_in, device_img_out, width, height, coef);
+            break;
+        case 2:
+            ajustar_brillo_no_coalesced_kernel<<<tamGrid, tamBlock>>>(device_img_in, device_img_out, width, height, coef);
+            break;
+    }
+    cudaDeviceSynchronize();
+
+    CLK_POSIX_STOP;
+    CLK_POSIX_ELAPSED;
+
+    printf("Tiempo ajustar brillo GPU: %f ms\n", t_elap);
+
     // Transferir resultado a la memoria principal
+    CUDA_CHK(cudaMemcpy(img_out, device_img_out, size, cudaMemcpyDeviceToHost)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
 
     // TODO: Ej 1b) Registrar tiempos de cada etapa de ajustar_brillo_gpu para las dos variantes. Discutir diferencia entre variantes.
     //              (tiempos, reserva de memoria, transferencia de datos, ejecución del kernel, etc)
@@ -57,7 +91,9 @@ void ajustar_brillo_gpu(float * img_in, int width, int height, float * img_out, 
     //              Qué puede decir del resultado de la métrica gld_efficiency?
     //              Duda: Esto se hace acá o en main.cpp?
 
-    // Liberar la memoria
+    // Libero la memoria en la GPU
+    CUDA_CHK(cudaFree(device_img_in));
+    CUDA_CHK(cudaFree(device_img_out));
 }
 
 // Ej 2) Aplica un filtro Gaussiano que reduce el ruido de una imagen en escala de grises.
@@ -65,22 +101,38 @@ void ajustar_brillo_gpu(float * img_in, int width, int height, float * img_out, 
 //       Los pesos por los cuales se pondera cada vecino en el promedio se almacenan en una matriz cuadrada (máscara)
 void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[], int m_size){
     
-    // Reservar memoria en la GPU
+    // Tamaño de img_in en memoria
+    unsigned int size = width * height * sizeof(float);
+    float * device_img_in = (float *)malloc(size);
+    float * device_img_out = (float *)malloc(size);
 
-    // Copiar imagen y máscara a la GPU
+    // Reservo memoria en la GPU
+    CUDA_CHK(cudaMalloc((void**)& device_img_in, size));
+    CUDA_CHK(cudaMalloc((void**)& device_img_out, size));
+
+    // Copio los datos a la memoria de la GPU
+    CUDA_CHK(cudaMemcpy(device_img_in, img_in, size, cudaMemcpyHostToDevice)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
    
     // Configurar grilla y lanzar kernel
     // TODO: La grilla (bidimensional) de threads debe estar configurada para aceptar matrices de cualquier tamaño.
-    // Es importante en el kernel usar blockIdx y threadIdx adecuadamente para acceder a esta estructura.
+    int block_size = 32;
+    int block_amount_x = width / block_size + (width % block_size != 0); // Division with ceiling
+    int block_amount_y = height / block_size + (height % block_size != 0); // Division with ceiling
+
+    dim3 tamGrid(block_amount_x, block_amount_y); // Grid dimension
+    dim3 tamBlock(block_size, block_size); // Block dimension
 
     // Transferir resultado a la memoria principal
+    CUDA_CHK(cudaMemcpy(img_out, device_img_out, size, cudaMemcpyDeviceToHost)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
 
     // TODO: Ej 2b) Registre los tiempos de cada etapa de la función y compare las variantes de CPU y GPU.
     //              Usar ambos mecanismo de medidas de utils.h (deberian dar casi igual)
     //              ¿Qué aceleración se logra? ¿Y considerando únicamente el tiempo del kernel (cudaMemcpy tiene mucho overhead!)?
     //              Duda: Esto se hace acá o en main.cpp?
 
-	// Liberar la memoria
+    // Libero la memoria en la GPU
+    CUDA_CHK(cudaFree(device_img_in));
+    CUDA_CHK(cudaFree(device_img_out));
 }
 
 // Recorre la imagen sumando secuencialmente un coeficiente entre -255 y 255 a cada píxel, aumentando o reduciendo su brillo.
