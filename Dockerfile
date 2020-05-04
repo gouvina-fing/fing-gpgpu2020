@@ -6,7 +6,8 @@ RUN apt-get update
 WORKDIR /workspace/src/
 
 # If a build.sh needs to be executed uncomment:
-#COPY build.sh /workspace/src/build.sh
-#RUN ./build.sh
+COPY build.sh /workspace/src/build.sh
+RUN chmod +x build.sh
+RUN ./build.sh
 
 ENTRYPOINT [ "/bin/bash" ]
