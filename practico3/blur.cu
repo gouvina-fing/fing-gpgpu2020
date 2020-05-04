@@ -13,7 +13,40 @@ using namespace std;
 // Ejemplo filtro https://www.nvidia.com/content/nvision2008/tech_presentations/Game_Developer_Track/NVISION08-Image_Processing_and_Video_with_CUDA.pdf
 // Ejemplo multiplicacion de matrices http://selkie.macalester.edu/csinparallel/modules/GPUProgramming/build/html/CUDA2D/CUDA2D.html
 __global__ void blur_kernel(float* d_input, int width, int height, float* d_output, float* d_msk, int m_size) {
+    
+    __shared__ float block_memory[1024];
 
+    int imgx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    imgx = max(0, imgx);
+    imgx = min(imgx, width - 1);
+
+    int imgy = (blockIdx.y * blockDim.y) + threadIdx.y;
+    imgy = max(0, imgy);
+    imgy = min(imgy, height - 1);
+
+    int block_index = (threadIdx.y * blockDim.y) + threadIdx.x;
+    block_memory[block_index] = d_input[(imgy*width) + imgx];
+    
+    __syncthreads();
+
+    int val_pixel = 0;
+
+    // Aca aplicamos la mascara
+    for (int i = -m_size/2; i < m_size/2 ; i++) {
+        for (int j = -m_size/2; j < m_size/2 ; j++) {
+            
+            int ix = imgx + i;
+            int iy = imgy + j;
+            
+            // Altera el valor de un pixel, según sus vecinos.
+            if(ix >= 0 && ix < width && iy>= 0 && iy < height)
+                val_pixel = val_pixel +  block_memory[block_index + (i * blockDim.x) + j] * d_msk[(i+m_size/2)*m_size+(j+m_size/2)];
+        }
+    }
+
+    if (imgx < width && imgy < height) {
+        d_output[(imgy*width) + imgx] = val_pixel;
+    }
 }
 
 // Ej 1a) Threads con índice consecutivo en la dirección x deben acceder a pixels de una misma fila de la imagen.
@@ -61,8 +94,8 @@ void ajustar_brillo_gpu(float * img_in, int width, int height, float * img_out, 
     dim3 tamBlock(block_size, block_size); // Block dimension
 
     // Lanzar kernel
-    CLK_POSIX_INIT;
-    CLK_POSIX_START;
+    CLK_CUEVTS_INIT;
+    CLK_CUEVTS_START;
 
     switch(algorithm) {
         case 1:
@@ -74,8 +107,8 @@ void ajustar_brillo_gpu(float * img_in, int width, int height, float * img_out, 
     }
     cudaDeviceSynchronize();
 
-    CLK_POSIX_STOP;
-    CLK_POSIX_ELAPSED;
+    CLK_CUEVTS_STOP;
+    CLK_CUEVTS_ELAPSED;
 
     printf("Tiempo ajustar brillo GPU: %f ms\n", t_elap);
 
@@ -121,6 +154,17 @@ void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[
 
     dim3 tamGrid(block_amount_x, block_amount_y); // Grid dimension
     dim3 tamBlock(block_size, block_size); // Block dimension
+
+    CLK_CUEVTS_INIT;
+    CLK_CUEVTS_START;
+
+    blur_kernel<<<tamGrid, tamBlock>>>(device_img_in, width, height, device_img_out, msk, m_size);
+    cudaDeviceSynchronize();
+
+    CLK_CUEVTS_STOP;
+    CLK_CUEVTS_ELAPSED;
+
+    printf("Tiempo filtro gaussiano GPU: %f ms\n", t_elap);
 
     // Transferir resultado a la memoria principal
     CUDA_CHK(cudaMemcpy(img_out, device_img_out, size, cudaMemcpyDeviceToHost)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
