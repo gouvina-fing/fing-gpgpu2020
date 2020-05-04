@@ -1,1 +1,1 @@
-apt install libx11-dev
+apt install -y libx11-dev
