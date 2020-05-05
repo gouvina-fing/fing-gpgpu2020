@@ -3,8 +3,8 @@
 
 using namespace cimg_library;
 
-void blur_gpu(float * image, int width, int height, float * image_out, float * mask, int m_size);
 void blur_cpu(float * image_in, int width, int height, float * image_out, float * mask, int m_size);
+void blur_gpu(float * image, int width, int height, float * image_out, float * mask, int m_size);
 void ajustar_brillo_cpu(float * img_in, int width, int height, float * img_out, float coef);
 void ajustar_brillo_gpu(float * img_in, int width, int height, float * img_out, float coef, int algorithm, int filas=1);
     

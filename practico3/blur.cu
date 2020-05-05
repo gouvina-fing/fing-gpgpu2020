@@ -46,14 +46,14 @@ __global__ void blur_kernel(float* d_input, int width, int height, float* d_outp
             // Altera el valor de un pixel, según sus vecinos.
             if (ix >= 0 && ix < width && iy >= 0 && iy < height) { // && bindex >= 0 && bindex < 1024) {
                 //val_pixel = val_pixel +  block_memory[bindex] * d_msk[i*m_size+j];
-                val_pixel = val_pixel +  d_input[(iy*width) + ix] * d_msk[i*m_size+j];
+                val_pixel = val_pixel +  (d_input[(imgy*width) + imgx] * d_msk[i*m_size+j]);
             }
         }
     }
 
     
-    if (imgx < width && imgy < height) {
-        d_output[(imgy*width) + imgx] = min(255.0f, max(0.0f, val_pixel));
+    if (imgx < width && imgy < height && val_pixel >= 0 && val_pixel < 256) {
+        d_output[(imgy*width) + imgx] = val_pixel;
     }
 }
 
@@ -144,15 +144,19 @@ void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[
     
     // Tamaño de img_in en memoria
     unsigned int size = width * height * sizeof(float);
+    unsigned int size_msk = 25 * sizeof(float);
     float * device_img_in = (float *)malloc(size);
     float * device_img_out = (float *)malloc(size);
+    float * device_msk = (float *)malloc(size_msk);
 
     // Reservo memoria en la GPU
     CUDA_CHK(cudaMalloc((void**)& device_img_in, size));
     CUDA_CHK(cudaMalloc((void**)& device_img_out, size));
+    CUDA_CHK(cudaMalloc((void**)& device_msk, size_msk));
 
     // Copio los datos a la memoria de la GPU
     CUDA_CHK(cudaMemcpy(device_img_in, img_in, size, cudaMemcpyHostToDevice)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
+    CUDA_CHK(cudaMemcpy(device_msk, msk, size_msk, cudaMemcpyHostToDevice)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
    
     // Configurar grilla y lanzar kernel
     // TODO: La grilla (bidimensional) de threads debe estar configurada para aceptar matrices de cualquier tamaño.
@@ -166,7 +170,7 @@ void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[
     CLK_CUEVTS_INIT;
     CLK_CUEVTS_START;
 
-    blur_kernel<<<tamGrid, tamBlock>>>(device_img_in, width, height, device_img_out, msk, m_size);
+    blur_kernel<<<tamGrid, tamBlock>>>(device_img_in, width, height, device_img_out, device_msk, m_size);
     cudaDeviceSynchronize();
 
     CLK_CUEVTS_STOP;
