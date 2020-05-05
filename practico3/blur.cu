@@ -33,7 +33,7 @@ __global__ void blur_kernel(float* d_input, int width, int height, float* d_outp
             int ix = imgx + i - m_size / 2;
             int iy = imgy + j - m_size / 2;
             
-            int bindex = ((threadIdx.y + i - m_size / 2) * blockDim.y) + (threadIdx.x + j - m_size / 2);
+            int bindex = block_index + (iy * blockDim.x) + ix; //((threadIdx.y + i - m_size / 2) * blockDim.y) + (threadIdx.x + j - m_size / 2);
 
             // Altera el valor de un pixel, según sus vecinos.
             if (bindex >= 0 && bindex < 1024) {
@@ -44,6 +44,7 @@ __global__ void blur_kernel(float* d_input, int width, int height, float* d_outp
             }
         }
     }
+
     
     if (imgx < width && imgy < height) {
         d_output[(imgy*width) + imgx] = val_pixel;
