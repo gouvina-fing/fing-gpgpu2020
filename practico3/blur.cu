@@ -14,18 +14,13 @@ using namespace std;
 // Ejemplo multiplicacion de matrices http://selkie.macalester.edu/csinparallel/modules/GPUProgramming/build/html/CUDA2D/CUDA2D.html
 __global__ void blur_kernel(float* d_input, int width, int height, float* d_output, float* d_msk, int m_size) {
     
-    // __shared__ float block_memory[1024];
+    __shared__ float block_memory[1024];
 
     int imgx = (blockIdx.x * blockDim.x) + threadIdx.x;
-    imgx = max(0, imgx);
-    imgx = min(imgx, width - 1);
-
     int imgy = (blockIdx.y * blockDim.y) + threadIdx.y;
-    imgy = max(0, imgy);
-    imgy = min(imgy, height - 1);
-
-    //int block_index = (threadIdx.y * blockDim.y) + threadIdx.x;
-    //block_memory[block_index] = d_input[(imgy*width) + imgx];
+    
+    int block_index = (threadIdx.y * blockDim.y) + threadIdx.x;
+    block_memory[block_index] = d_input[(imgy*width) + imgx];
     
     __syncthreads();
 
@@ -34,25 +29,23 @@ __global__ void blur_kernel(float* d_input, int width, int height, float* d_outp
     // Aca aplicamos la mascara
     for (int i = 0; i < m_size; i++) {
         for (int j = 0; j < m_size; j++) {
-            
-            int i2 = i - m_size/2;
-            int j2 = j - m_size/2;
 
-            int ix = imgx + i2;
-            int iy = imgy + j2;
+            int ix = imgx + i - m_size / 2;
+            int iy = imgy + j - m_size / 2;
             
-            //int bindex = ((threadIdx.y + i2) * blockDim.y) + (threadIdx.x + j2);
+            int bindex = ((threadIdx.y + i - m_size / 2) * blockDim.y) + (threadIdx.x + j - m_size / 2);
 
             // Altera el valor de un pixel, según sus vecinos.
-            if (ix >= 0 && ix < width && iy >= 0 && iy < height) { // && bindex >= 0 && bindex < 1024) {
-                //val_pixel = val_pixel +  block_memory[bindex] * d_msk[i*m_size+j];
-                val_pixel = val_pixel +  (d_input[(imgy*width) + imgx] * d_msk[i*m_size+j]);
+            if (bindex >= 0 && bindex < 1024) {
+                val_pixel = val_pixel +  block_memory[bindex] * d_msk[i*m_size+j];
+            }
+            else if (ix >= 0 && ix < width && iy >= 0 && iy < height) {
+                val_pixel = val_pixel + d_input[(iy * width) + ix] * d_msk[i*m_size+j];
             }
         }
     }
-
     
-    if (imgx < width && imgy < height && val_pixel >= 0 && val_pixel < 256) {
+    if (imgx < width && imgy < height) {
         d_output[(imgy*width) + imgx] = val_pixel;
     }
 }
@@ -235,9 +228,10 @@ void blur_cpu(float * img_in, int width, int height, float * img_out, float msk[
                         val_pixel = val_pixel +  img_in[iy * width +ix] * msk[i*m_size+j];
                 }
             }
-            
+
             // Guardo valor resultado
             img_out[imgy*width+imgx]= val_pixel;
+
         }
     }
 
