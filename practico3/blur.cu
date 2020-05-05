@@ -14,7 +14,7 @@ using namespace std;
 // Ejemplo multiplicacion de matrices http://selkie.macalester.edu/csinparallel/modules/GPUProgramming/build/html/CUDA2D/CUDA2D.html
 __global__ void blur_kernel(float* d_input, int width, int height, float* d_output, float* d_msk, int m_size) {
     
-    __shared__ float block_memory[1024];
+    // __shared__ float block_memory[1024];
 
     int imgx = (blockIdx.x * blockDim.x) + threadIdx.x;
     imgx = max(0, imgx);
@@ -24,28 +24,36 @@ __global__ void blur_kernel(float* d_input, int width, int height, float* d_outp
     imgy = max(0, imgy);
     imgy = min(imgy, height - 1);
 
-    int block_index = (threadIdx.y * blockDim.y) + threadIdx.x;
-    block_memory[block_index] = d_input[(imgy*width) + imgx];
+    //int block_index = (threadIdx.y * blockDim.y) + threadIdx.x;
+    //block_memory[block_index] = d_input[(imgy*width) + imgx];
     
     __syncthreads();
 
-    int val_pixel = 0;
+    float val_pixel = 0;
 
     // Aca aplicamos la mascara
-    for (int i = -m_size/2; i < m_size/2 ; i++) {
-        for (int j = -m_size/2; j < m_size/2 ; j++) {
+    for (int i = 0; i < m_size; i++) {
+        for (int j = 0; j < m_size; j++) {
             
-            int ix = imgx + i;
-            int iy = imgy + j;
+            int i2 = i - m_size/2;
+            int j2 = j - m_size/2;
+
+            int ix = imgx + i2;
+            int iy = imgy + j2;
             
+            //int bindex = ((threadIdx.y + i2) * blockDim.y) + (threadIdx.x + j2);
+
             // Altera el valor de un pixel, según sus vecinos.
-            if(ix >= 0 && ix < width && iy>= 0 && iy < height)
-                val_pixel = val_pixel +  block_memory[block_index + (i * blockDim.x) + j] * d_msk[(i+m_size/2)*m_size+(j+m_size/2)];
+            if (ix >= 0 && ix < width && iy >= 0 && iy < height) { // && bindex >= 0 && bindex < 1024) {
+                //val_pixel = val_pixel +  block_memory[bindex] * d_msk[i*m_size+j];
+                val_pixel = val_pixel +  d_input[(iy*width) + ix] * d_msk[i*m_size+j];
+            }
         }
     }
 
+    
     if (imgx < width && imgy < height) {
-        d_output[(imgy*width) + imgx] = val_pixel;
+        d_output[(imgy*width) + imgx] = min(255.0f, max(0.0f, val_pixel));
     }
 }
 
