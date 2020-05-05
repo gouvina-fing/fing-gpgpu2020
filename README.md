@@ -19,8 +19,8 @@ Tareas del curso de Computación de Propósito General en Unidades de Procesamie
 `docker run -it --gpus all --network host -v $(pwd):/workspace/src gpgpu`
 
 ### Remove dangling images
+Useful command to free up space
 `docker rmi -f $(docker images -f "dangling=true" -q)`
-
 
 ## Cluster
 
