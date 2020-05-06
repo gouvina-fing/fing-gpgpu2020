@@ -13,16 +13,9 @@ using namespace std;
 // Ejemplo multiplicacion de matrices http://selkie.macalester.edu/csinparallel/modules/GPUProgramming/build/html/CUDA2D/CUDA2D.html
 __global__ void blur_kernel(float* d_input, int width, int height, float* d_output, const float* __restrict__ d_msk, int m_size) {
     
-    // __shared__ float block_memory[1024];
-
     int imgx = (blockIdx.x * blockDim.x) + threadIdx.x;
     int imgy = (blockIdx.y * blockDim.y) + threadIdx.y;
     
-    // int block_index = (threadIdx.y * blockDim.y) + threadIdx.x;
-    // block_memory[block_index] = d_input[(imgy*width) + imgx];
-    
-    // __syncthreads();
-
     float val_pixel = 0;
 
     // Aca aplicamos la mascara
@@ -36,19 +29,6 @@ __global__ void blur_kernel(float* d_input, int width, int height, float* d_outp
             if (ix >= 0 && ix < width && iy >= 0 && iy < height) {
                 val_pixel = val_pixel + d_input[(iy * width) + ix] * d_msk[i*m_size+j];
             }
-            
-            /*
-                Versión memoria compartida:
-
-                int bindex = block_index + (iy * blockDim.x) + ix; //((threadIdx.y + i - m_size / 2) * blockDim.y) + (threadIdx.x + j - m_size / 2);
-                
-                if (bindex >= 0 && bindex < 1024) {
-                    val_pixel = val_pixel +  block_memory[bindex] * d_msk[i*m_size+j];
-                }
-                else if (ix >= 0 && ix < width && iy >= 0 && iy < height) {
-                    val_pixel = val_pixel + d_input[(iy * width) + ix] * d_msk[i*m_size+j];
-                }
-            */
         }
     }
     
