@@ -74,31 +74,42 @@ __global__ void ajustar_brillo_no_coalesced_kernel(float* d_input, float* d_outp
 // Procesa la img en GPU sumando un coeficiente entre -255 y 255 a cada píxel, aumentando o reduciendo su brillo.
 void ajustar_brillo_gpu(float * img_in, int width, int height, float * img_out, float coef, int algorithm, int filas=1) {
 
-    // Tamaño de img_in en memoria
+    // Auxiliar para contar tiempo total
+    float t_total = 0;
+
+    // Etapa 1: Reserva de memoria
+    CLK_CUEVTS_INIT;
+    CLK_CUEVTS_START;
+    // Reserva en CPU
     unsigned int size = width * height * sizeof(float);
     float * device_img_in = (float *)malloc(size);
     float * device_img_out = (float *)malloc(size);
-
-    // Reservo memoria en la GPU
+    // Reserva en GPU
     CUDA_CHK(cudaMalloc((void**)& device_img_in, size));
     CUDA_CHK(cudaMalloc((void**)& device_img_out, size));
+    CLK_CUEVTS_STOP;
+    CLK_CUEVTS_ELAPSED;
+    printf("Tiempo ajustar brillo GPU (Reserva de memoria): %f ms\n", t_elap);
+    t_total = t_total + t_elap;
 
-    // Copio los datos a la memoria de la GPU
+    // Etapa 2: Transferencia de datos (Host -> Device)
+    CLK_CUEVTS_START;
     CUDA_CHK(cudaMemcpy(device_img_in, img_in, size, cudaMemcpyHostToDevice)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
-   
-    // Configurar grilla y lanzar kernel
-    // TODO: La grilla (bidimensional) de threads debe estar configurada para aceptar matrices de cualquier tamaño.
-    int block_size = 32;
+    CLK_CUEVTS_STOP;
+    CLK_CUEVTS_ELAPSED;
+    printf("Tiempo ajustar brillo GPU (Transferencia de datos (Host -> Device)): %f ms\n", t_elap);
+    t_total = t_total + t_elap;
+
+    // Etapa 3: Definir grilla
+    int block_size = 32; // TODO: Definir constante
     int block_amount_x = width / block_size + (width % block_size != 0); // Division with ceiling
     int block_amount_y = height / block_size + (height % block_size != 0); // Division with ceiling
-
     dim3 tamGrid(block_amount_x, block_amount_y); // Grid dimension
     dim3 tamBlock(block_size, block_size); // Block dimension
 
-    // Lanzar kernel
-    CLK_CUEVTS_INIT;
+    // Etapa 4: Lanzar kernel
     CLK_CUEVTS_START;
-
+    // Elegir kernel según parámetro
     switch(algorithm) {
         case 1:
             ajustar_brillo_coalesced_kernel<<<tamGrid, tamBlock>>>(device_img_in, device_img_out, width, height, coef);
@@ -107,26 +118,24 @@ void ajustar_brillo_gpu(float * img_in, int width, int height, float * img_out, 
             ajustar_brillo_no_coalesced_kernel<<<tamGrid, tamBlock>>>(device_img_in, device_img_out, width, height, coef);
             break;
     }
+    // Sincronizar threads antes de parar timers
     cudaDeviceSynchronize();
-
     CLK_CUEVTS_STOP;
     CLK_CUEVTS_ELAPSED;
+    printf("Tiempo ajustar brillo GPU (Kernel): %f ms\n", t_elap);
+    t_total = t_total + t_elap;
 
-    printf("Tiempo ajustar brillo GPU: %f ms\n", t_elap);
-
-    // Transferir resultado a la memoria principal
+    // Etapa 5: Transferencia de datos (Device -> Host)
+    CLK_CUEVTS_START;
     CUDA_CHK(cudaMemcpy(img_out, device_img_out, size, cudaMemcpyDeviceToHost)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
+    CLK_CUEVTS_STOP;
+    CLK_CUEVTS_ELAPSED;
+    printf("Tiempo ajustar brillo GPU (Transferencia de datos (Host <- Device)): %f ms\n", t_elap);
+    t_total = t_total + t_elap;
+    printf("Tiempo ajustar brillo GPU: %f ms\n", t_total);
+    printf("\n");
 
-    // TODO: Ej 1b) Registrar tiempos de cada etapa de ajustar_brillo_gpu para las dos variantes. Discutir diferencia entre variantes.
-    //              (tiempos, reserva de memoria, transferencia de datos, ejecución del kernel, etc)
-    //              Usar ambos mecanismo de medidas de utils.h (deberian dar casi igual)
-
-    // TODO: Ej 1c) Compare los resultados de la salidad de nvprof.
-    //              Registrar con nvprof --profileapi-trace none --metrics gld_efficiency ./blur imagen.ppm
-    //              Qué puede decir del resultado de la métrica gld_efficiency?
-    //              Duda: Esto se hace acá o en main.cpp?
-
-    // Libero la memoria en la GPU
+    // Etapa 6: Liberar memoria
     CUDA_CHK(cudaFree(device_img_in));
     CUDA_CHK(cudaFree(device_img_out));
 }
@@ -136,51 +145,64 @@ void ajustar_brillo_gpu(float * img_in, int width, int height, float * img_out, 
 //       Los pesos por los cuales se pondera cada vecino en el promedio se almacenan en una matriz cuadrada (máscara)
 void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[], int m_size){
     
-    // Tamaño de img_in en memoria
+    // Auxiliar para contar tiempo total
+    float t_total = 0;
+    
+    // Etapa 1: Reserva de Memoria
+    CLK_CUEVTS_INIT;
+    CLK_CUEVTS_START;
+    // Reserva en CPU
     unsigned int size = width * height * sizeof(float);
     unsigned int size_msk = 25 * sizeof(float);
     float * device_img_in = (float *)malloc(size);
     float * device_img_out = (float *)malloc(size);
     float * device_msk = (float *)malloc(size_msk);
-
-    // Reservo memoria en la GPU
+    // Reserva en GPU
     CUDA_CHK(cudaMalloc((void**)& device_img_in, size));
     CUDA_CHK(cudaMalloc((void**)& device_img_out, size));
     CUDA_CHK(cudaMalloc((void**)& device_msk, size_msk));
-
-    // Copio los datos a la memoria de la GPU
+    CLK_CUEVTS_STOP;
+    CLK_CUEVTS_ELAPSED;
+    printf("Tiempo filtro gaussiano GPU (Reserva de memoria): %f ms\n", t_elap);
+    t_total = t_total + t_elap;
+    
+    // Etapa 2: Transferencia de datos (Host -> Device)
+    CLK_CUEVTS_START;
     CUDA_CHK(cudaMemcpy(device_img_in, img_in, size, cudaMemcpyHostToDevice)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
     CUDA_CHK(cudaMemcpy(device_msk, msk, size_msk, cudaMemcpyHostToDevice)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
-   
-    // Configurar grilla y lanzar kernel
-    // TODO: La grilla (bidimensional) de threads debe estar configurada para aceptar matrices de cualquier tamaño.
-    int block_size = 32;
+    CLK_CUEVTS_STOP;
+    CLK_CUEVTS_ELAPSED;
+    printf("Tiempo filtro gaussiano GPU (Transferencia de datos (Host -> Device)): %f ms\n", t_elap);
+    t_total = t_total + t_elap;
+
+    // Etapa 3: Definir grilla
+    int block_size = 32; // TODO: Definir constante
     int block_amount_x = width / block_size + (width % block_size != 0); // Division with ceiling
     int block_amount_y = height / block_size + (height % block_size != 0); // Division with ceiling
-
     dim3 tamGrid(block_amount_x, block_amount_y); // Grid dimension
     dim3 tamBlock(block_size, block_size); // Block dimension
 
-    CLK_CUEVTS_INIT;
+    // Etapa 4 : Lanzar Kernel
     CLK_CUEVTS_START;
-
     blur_kernel<<<tamGrid, tamBlock>>>(device_img_in, width, height, device_img_out, device_msk, m_size);
-    cudaDeviceSynchronize();
-
+    // Sincronizar threads antes de parar timers
+    cudaDeviceSynchronize(); 
     CLK_CUEVTS_STOP;
     CLK_CUEVTS_ELAPSED;
+    printf("Tiempo filtro gaussiano GPU (Kernel): %f ms\n", t_elap);
+    t_total = t_total + t_elap;
 
-    printf("Tiempo filtro gaussiano GPU: %f ms\n", t_elap);
-
-    // Transferir resultado a la memoria principal
+    // Etapa 5: Transferencia de Datos (Device -> Host)
+    CLK_CUEVTS_START;
     CUDA_CHK(cudaMemcpy(img_out, device_img_out, size, cudaMemcpyDeviceToHost)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
+    CLK_CUEVTS_STOP;
+    CLK_CUEVTS_ELAPSED;
+    printf("Tiempo filtro gaussiano GPU (Transferencia de datos (Host <- Device)): %f ms\n", t_elap);
+    t_total = t_total + t_elap;
+    printf("Tiempo filtro gaussiano GPU: %f ms\n", t_total);
+    printf("\n");
 
-    // TODO: Ej 2b) Registre los tiempos de cada etapa de la función y compare las variantes de CPU y GPU.
-    //              Usar ambos mecanismo de medidas de utils.h (deberian dar casi igual)
-    //              ¿Qué aceleración se logra? ¿Y considerando únicamente el tiempo del kernel (cudaMemcpy tiene mucho overhead!)?
-    //              Duda: Esto se hace acá o en main.cpp?
-
-    // Libero la memoria en la GPU
+    // Etapa 6: Liberación de Memoria
     CUDA_CHK(cudaFree(device_img_in));
     CUDA_CHK(cudaFree(device_img_out));
 }
@@ -201,6 +223,8 @@ void ajustar_brillo_cpu(float * img_in, int width, int height, float * img_out, 
     CLK_POSIX_ELAPSED;
 
     printf("Tiempo ajustar brillo CPU: %f ms\n", t_elap);
+    printf("\n");
+
 }
 
 // Recorre la imagen aplicando secuencialmente un filtro Gaussiano que reduce el ruido de una imagen en escala de grises.
@@ -240,4 +264,5 @@ void blur_cpu(float * img_in, int width, int height, float * img_out, float msk[
     CLK_POSIX_ELAPSED;
 
     printf("Tiempo filtro Gaussiano CPU: %f ms\n", t_elap);
+    printf("\n");
 }
