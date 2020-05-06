@@ -2,86 +2,85 @@
 
 nvcc main.cpp blur.cu -o blur -O3 -L/usr/X11R6/lib -lm -lpthread -lX11
 nvcc -Xptxas -dlcm=cg main.cpp blur.cu -o blur_no_cache_l1 -O3 -L/usr/X11R6/lib -lm -lpthread -lX11
-==2290== NVPROF is profiling process 2290, command: ./blur img/fing1_ruido.pgm
-==2290== Some kernel(s) will be replayed on device 0 in order to collect all events/metrics.
-==2290== Profiling application: ./blur img/fing1_ruido.pgm
+==6143== NVPROF is profiling process 6143, command: ./blur img/fing1_ruido.pgm
+==6143== Some kernel(s) will be replayed on device 0 in order to collect all events/metrics.
+==6143== Profiling application: ./blur img/fing1_ruido.pgm
 Usando gettimeofday para medir el tiempo
-Tiempo ajustar brillo CPU: 14.468018 ms
+Tiempo ajustar brillo CPU: 15.828857 ms
 
 Usando CUDA EVENTS para medir el tiempo
-Tiempo ajustar brillo GPU (Reserva de memoria): 0.412864 ms
-Tiempo ajustar brillo GPU (Transferencia de datos (Host -> Device)): 1.192256 ms
-Tiempo ajustar brillo GPU (Kernel): 75.912094 ms
-Tiempo ajustar brillo GPU (Transferencia de datos (Host <- Device)): 1.189120 ms
-Tiempo ajustar brillo GPU: 78.706329 ms
+Tiempo ajustar brillo GPU (Reserva de memoria): 0.429472 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host -> Device)): 1.214880 ms
+Tiempo ajustar brillo GPU (Kernel): 77.976929 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host <- Device)): 1.232416 ms
+Tiempo ajustar brillo GPU: 80.853691 ms
 
 Usando CUDA EVENTS para medir el tiempo
-Tiempo ajustar brillo GPU (Reserva de memoria): 1.469856 ms
-Tiempo ajustar brillo GPU (Transferencia de datos (Host -> Device)): 1.580256 ms
-Tiempo ajustar brillo GPU (Kernel): 56.224415 ms
-Tiempo ajustar brillo GPU (Transferencia de datos (Host <- Device)): 1.192960 ms
-Tiempo ajustar brillo GPU: 60.467487 ms
+Tiempo ajustar brillo GPU (Reserva de memoria): 0.978560 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host -> Device)): 1.542144 ms
+Tiempo ajustar brillo GPU (Kernel): 55.658718 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host <- Device)): 1.193792 ms
+Tiempo ajustar brillo GPU: 59.373211 ms
 
 Usando gettimeofday para medir el tiempo
-Tiempo filtro Gaussiano CPU: 53.000000 ms
+Tiempo filtro Gaussiano CPU: 56.807129 ms
 
 Usando CUDA EVENTS para medir el tiempo
-Tiempo filtro gaussiano GPU (Reserva de memoria): 1.353568 ms
-Tiempo filtro gaussiano GPU (Transferencia de datos (Host -> Device)): 1.571296 ms
-Tiempo filtro gaussiano GPU (Kernel): 77.450211 ms
-Tiempo filtro gaussiano GPU (Transferencia de datos (Host <- Device)): 1.145376 ms
-Tiempo filtro gaussiano GPU: 81.520454 ms
+Tiempo filtro gaussiano GPU (Reserva de memoria): 1.009248 ms
+Tiempo filtro gaussiano GPU (Transferencia de datos (Host -> Device)): 1.505664 ms
+Tiempo filtro gaussiano GPU (Kernel): 71.559166 ms
+Tiempo filtro gaussiano GPU (Transferencia de datos (Host <- Device)): 1.197920 ms
+Tiempo filtro gaussiano GPU: 75.272003 ms
 
-==2290== Profiling result:
-==2290== Metric result:
+==6143== Profiling result:
+==6143== Metric result:
 Invocations                               Metric Name                        Metric Description         Min         Max         Avg
 Device "Tesla P100-PCIE-12GB (0)"
     Kernel: ajustar_brillo_coalesced_kernel(float*, float*, int, int, float)
           1                            gld_efficiency             Global Memory Load Efficiency      50.00%      50.00%      50.00%
     Kernel: blur_kernel(float*, int, int, float*, float const *, int)
-          1                            gld_efficiency             Global Memory Load Efficiency      30.33%      30.33%      30.33%
+          1                            gld_efficiency             Global Memory Load Efficiency      30.35%      30.35%      30.35%
     Kernel: ajustar_brillo_no_coalesced_kernel(float*, float*, int, int, float)
           1                            gld_efficiency             Global Memory Load Efficiency      12.50%      12.50%      12.50%
 
 # No Cache L1
 
-==2311== NVPROF is profiling process 2311, command: ./blur_no_cache_l1 img/fing1_ruido.pgm
-==2311== Some kernel(s) will be replayed on device 0 in order to collect all events/metrics.
-==2311== Profiling application: ./blur_no_cache_l1 img/fing1_ruido.pgm
-==2311== Profiling result:
-==2311== Metric result:
+==6159== NVPROF is profiling process 6159, command: ./blur_no_cache_l1 img/fing1_ruido.pgm
+==6159== Some kernel(s) will be replayed on device 0 in order to collect all events/metrics.
+==6159== Profiling application: ./blur_no_cache_l1 img/fing1_ruido.pgm
+==6159== Profiling result:
+==6159== Metric result:
 Invocations                               Metric Name                        Metric Description         Min         Max         Avg
 Device "Tesla P100-PCIE-12GB (0)"
     Kernel: ajustar_brillo_coalesced_kernel(float*, float*, int, int, float)
           1                            gld_efficiency             Global Memory Load Efficiency     100.00%     100.00%     100.00%
     Kernel: blur_kernel(float*, int, int, float*, float const *, int)
-          1                            gld_efficiency             Global Memory Load Efficiency      71.12%      71.12%      71.12%
+          1                            gld_efficiency             Global Memory Load Efficiency      71.30%      71.30%      71.30%
     Kernel: ajustar_brillo_no_coalesced_kernel(float*, float*, int, int, float)
           1                            gld_efficiency             Global Memory Load Efficiency      12.50%      12.50%      12.50%
 Usando gettimeofday para medir el tiempo
-Tiempo ajustar brillo CPU: 18.989014 ms
+Tiempo ajustar brillo CPU: 17.061035 ms
 
 Usando CUDA EVENTS para medir el tiempo
-Tiempo ajustar brillo GPU (Reserva de memoria): 0.394816 ms
-Tiempo ajustar brillo GPU (Transferencia de datos (Host -> Device)): 1.189600 ms
-Tiempo ajustar brillo GPU (Kernel): 66.592484 ms
-Tiempo ajustar brillo GPU (Transferencia de datos (Host <- Device)): 1.183328 ms
-Tiempo ajustar brillo GPU: 69.360229 ms
+Tiempo ajustar brillo GPU (Reserva de memoria): 0.409280 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host -> Device)): 1.193472 ms
+Tiempo ajustar brillo GPU (Kernel): 70.852898 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host <- Device)): 1.206720 ms
+Tiempo ajustar brillo GPU: 73.662369 ms
 
 Usando CUDA EVENTS para medir el tiempo
-Tiempo ajustar brillo GPU (Reserva de memoria): 1.536768 ms
-Tiempo ajustar brillo GPU (Transferencia de datos (Host -> Device)): 1.535072 ms
-Tiempo ajustar brillo GPU (Kernel): 55.966686 ms
-Tiempo ajustar brillo GPU (Transferencia de datos (Host <- Device)): 1.108864 ms
-Tiempo ajustar brillo GPU: 60.147388 ms
+Tiempo ajustar brillo GPU (Reserva de memoria): 0.906816 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host -> Device)): 1.529024 ms
+Tiempo ajustar brillo GPU (Kernel): 56.474434 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host <- Device)): 1.195648 ms
+Tiempo ajustar brillo GPU: 60.105923 ms
 
 Usando gettimeofday para medir el tiempo
-Tiempo filtro Gaussiano CPU: 54.174805 ms
+Tiempo filtro Gaussiano CPU: 56.213867 ms
 
 Usando CUDA EVENTS para medir el tiempo
-Tiempo filtro gaussiano GPU (Reserva de memoria): 1.336672 ms
-Tiempo filtro gaussiano GPU (Transferencia de datos (Host -> Device)): 1.554240 ms
-Tiempo filtro gaussiano GPU (Kernel): 72.630241 ms
-Tiempo filtro gaussiano GPU (Transferencia de datos (Host <- Device)): 1.257088 ms
-Tiempo filtro gaussiano GPU: 76.778244 ms
-
+Tiempo filtro gaussiano GPU (Reserva de memoria): 1.364832 ms
+Tiempo filtro gaussiano GPU (Transferencia de datos (Host -> Device)): 1.573408 ms
+Tiempo filtro gaussiano GPU (Kernel): 72.151039 ms
+Tiempo filtro gaussiano GPU (Transferencia de datos (Host <- Device)): 1.203680 ms
+Tiempo filtro gaussiano GPU: 76.292961 ms
