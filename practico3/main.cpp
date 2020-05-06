@@ -11,12 +11,10 @@ void ajustar_brillo_gpu(float * img_in, int width, int height, float * img_out, 
 int main(int argc, char** argv){
 
 	const char * path;
-	int algorithm;
 
-	if (argc < 3) printf("Invocar como: './blur nombre_archivo, algoritmo'. En donde algoritmo es 1 (coalesced) o 2 (no coalesced).\n");
+	if (argc < 2) printf("Invocar como: './blur nombre_archivo'.\n");
     else
         path = argv[1];
-        algorithm = atoi(argv[2]);
 
 
     // Inicializamos la mascara. El color del pixel original se conserva (más peso), pero los pixeles vecinos inciden en su valor en menor medida
@@ -40,8 +38,11 @@ int main(int argc, char** argv){
 	ajustar_brillo_cpu(img_matrix, image.width(), image.height(), img_out_matrix, 100);
    	image_out.save("output_brillo_cpu.ppm");
 
-	ajustar_brillo_gpu(img_matrix, image.width(), image.height(), img_out_matrix, 100, algorithm);
-   	image_out.save("output_brillo_gpu.ppm");
+	ajustar_brillo_gpu(img_matrix, image.width(), image.height(), img_out_matrix, 100, 1);
+   	image_out.save("output_brillo_coalesced_gpu.ppm");
+
+	ajustar_brillo_gpu(img_matrix, image.width(), image.height(), img_out_matrix, 100, 2);
+   	image_out.save("output_brillo_no_coalesced_gpu.ppm");
 	
 	blur_cpu(img_matrix, image.width(), image.height(), img_out_matrix, mascara, 5);
    	image_out.save("output_blur_cpu.ppm");

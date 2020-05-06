@@ -6,8 +6,8 @@
 #SBATCH --partition=normal
 #SBATCH --qos=gpu
 #SBATCH --gres=gpu:1
-#SBATCH --mail-type=ALL
-#SBATCH --mail-user=renzo.gambone@fing.edu.uy
+# #SBATCH --mail-type=ALL
+# #SBATCH --mail-user=renzo.gambone@fing.edu.uy
 #SBATCH -o salida.out
 
 export PATH=$PATH:/usr/local/cuda/bin
@@ -20,4 +20,6 @@ cd ~/practico3
 make
 
 #$1 $2 $3 # nombre del ejecutable, imagen, algoritmo
-nvprof --profile-api-trace none --metrics gld_efficiency ./blur img/fing1.pgm 1
+nvprof --profile-api-trace none --metrics gld_efficiency ./blur img/fing1_ruido.pgm
+echo ''
+nvprof --profile-api-trace none --metrics gld_efficiency ./blur_no_cache_l1 img/fing1_ruido.pgm

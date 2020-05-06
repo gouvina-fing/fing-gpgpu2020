@@ -7,22 +7,21 @@
 
 using namespace std;
 
-// CUDA Thread Indexing Cheatsheet https://cs.calvin.edu/courses/cs/374/CUDA/CUDA-Thread-Indexing-Cheatsheet.pdf
-
 // Ej 2a) Kernel que aplica el filtro Gaussiano en la GPU
+// CUDA Thread Indexing Cheatsheet https://cs.calvin.edu/courses/cs/374/CUDA/CUDA-Thread-Indexing-Cheatsheet.pdf
 // Ejemplo filtro https://www.nvidia.com/content/nvision2008/tech_presentations/Game_Developer_Track/NVISION08-Image_Processing_and_Video_with_CUDA.pdf
 // Ejemplo multiplicacion de matrices http://selkie.macalester.edu/csinparallel/modules/GPUProgramming/build/html/CUDA2D/CUDA2D.html
-__global__ void blur_kernel(float* d_input, int width, int height, float* d_output, float* d_msk, int m_size) {
+__global__ void blur_kernel(float* d_input, int width, int height, float* d_output, const float* __restrict__ d_msk, int m_size) {
     
-    __shared__ float block_memory[1024];
+    // __shared__ float block_memory[1024];
 
     int imgx = (blockIdx.x * blockDim.x) + threadIdx.x;
     int imgy = (blockIdx.y * blockDim.y) + threadIdx.y;
     
-    int block_index = (threadIdx.y * blockDim.y) + threadIdx.x;
-    block_memory[block_index] = d_input[(imgy*width) + imgx];
+    // int block_index = (threadIdx.y * blockDim.y) + threadIdx.x;
+    // block_memory[block_index] = d_input[(imgy*width) + imgx];
     
-    __syncthreads();
+    // __syncthreads();
 
     float val_pixel = 0;
 
@@ -33,18 +32,25 @@ __global__ void blur_kernel(float* d_input, int width, int height, float* d_outp
             int ix = imgx + i - m_size / 2;
             int iy = imgy + j - m_size / 2;
             
-            int bindex = block_index + (iy * blockDim.x) + ix; //((threadIdx.y + i - m_size / 2) * blockDim.y) + (threadIdx.x + j - m_size / 2);
-
             // Altera el valor de un pixel, según sus vecinos.
-            if (bindex >= 0 && bindex < 1024) {
-                val_pixel = val_pixel +  block_memory[bindex] * d_msk[i*m_size+j];
-            }
-            else if (ix >= 0 && ix < width && iy >= 0 && iy < height) {
+            if (ix >= 0 && ix < width && iy >= 0 && iy < height) {
                 val_pixel = val_pixel + d_input[(iy * width) + ix] * d_msk[i*m_size+j];
             }
+            
+            /*
+                Versión memoria compartida:
+
+                int bindex = block_index + (iy * blockDim.x) + ix; //((threadIdx.y + i - m_size / 2) * blockDim.y) + (threadIdx.x + j - m_size / 2);
+                
+                if (bindex >= 0 && bindex < 1024) {
+                    val_pixel = val_pixel +  block_memory[bindex] * d_msk[i*m_size+j];
+                }
+                else if (ix >= 0 && ix < width && iy >= 0 && iy < height) {
+                    val_pixel = val_pixel + d_input[(iy * width) + ix] * d_msk[i*m_size+j];
+                }
+            */
         }
     }
-
     
     if (imgx < width && imgy < height) {
         d_output[(imgy*width) + imgx] = val_pixel;
