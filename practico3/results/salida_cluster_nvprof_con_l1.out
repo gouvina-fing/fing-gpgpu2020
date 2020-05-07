@@ -1,0 +1,50 @@
+nvcc main.cpp blur.cu -o blur -O3 -L/usr/X11R6/lib -lm -lpthread -lX11
+nvcc -Xptxas -dlcm=cg main.cpp blur.cu -o blur_no_cache_l1 -O3 -L/usr/X11R6/lib -lm -lpthread -lX11
+
+==30408== NVPROF is profiling process 30408, command: ./blur img/fing1_ruido.pgm
+==30408== Some kernel(s) will be replayed on device 0 in order to collect all events/metrics.
+==30408== Profiling application: ./blur img/fing1_ruido.pgm
+Usando CUDA EVENTS para medir el tiempo
+Tiempo ajustar brillo GPU (Reserva de memoria): 0.408800 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host -> Device)): 1.171456 ms
+Tiempo ajustar brillo GPU (Kernel): 78.352257 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host <- Device)): 1.266592 ms
+Tiempo ajustar brillo GPU: 81.199104 ms
+
+Usando gettimeofday para medir el tiempo
+Tiempo ajustar brillo CPU: 19.777832 ms
+
+Usando CUDA EVENTS para medir el tiempo
+Tiempo ajustar brillo GPU (Reserva de memoria): 0.533248 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host -> Device)): 1.083520 ms
+Tiempo ajustar brillo GPU (Kernel): 52.886208 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host <- Device)): 1.239232 ms
+Tiempo ajustar brillo GPU: 55.742207 ms
+
+Usando CUDA EVENTS para medir el tiempo
+Tiempo ajustar brillo GPU (Reserva de memoria): 0.417568 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host -> Device)): 1.153024 ms
+Tiempo ajustar brillo GPU (Kernel): 52.048672 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host <- Device)): 1.237568 ms
+Tiempo ajustar brillo GPU: 54.856831 ms
+
+Usando gettimeofday para medir el tiempo
+Tiempo filtro Gaussiano CPU: 48.375000 ms
+
+Usando CUDA EVENTS para medir el tiempo
+Tiempo filtro gaussiano GPU (Reserva de memoria): 0.723968 ms
+Tiempo filtro gaussiano GPU (Transferencia de datos (Host -> Device)): 1.119104 ms
+Tiempo filtro gaussiano GPU (Kernel): 74.351967 ms
+Tiempo filtro gaussiano GPU (Transferencia de datos (Host <- Device)): 1.234752 ms
+Tiempo filtro gaussiano GPU: 77.429787 ms
+
+==30408== Profiling result:
+==30408== Metric result:
+Invocations                               Metric Name                        Metric Description         Min         Max         Avg
+Device "Tesla P100-PCIE-12GB (0)"
+    Kernel: ajustar_brillo_coalesced_kernel(float*, float*, int, int, float)
+          2                            gld_efficiency             Global Memory Load Efficiency      50.00%      50.00%      50.00%
+    Kernel: blur_kernel(float*, int, int, float*, float const *, int)
+          1                            gld_efficiency             Global Memory Load Efficiency      30.35%      30.35%      30.35%
+    Kernel: ajustar_brillo_no_coalesced_kernel(float*, float*, int, int, float)
+          1                            gld_efficiency             Global Memory Load Efficiency      12.50%      12.50%      12.50%
