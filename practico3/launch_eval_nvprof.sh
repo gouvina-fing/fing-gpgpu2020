@@ -8,7 +8,7 @@
 #SBATCH --gres=gpu:1
 # #SBATCH --mail-type=ALL
 # #SBATCH --mail-user=renzo.gambone@fing.edu.uy
-#SBATCH -o salida_single.out
+#SBATCH -o salida_cluster_nvprof.out
 
 export PATH=$PATH:/usr/local/cuda/bin
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64
@@ -17,10 +17,9 @@ source /etc/profile.d/modules.sh
 
 cd ~/practico3
 
-lscpu
-
-nvidia-smi
-
 make
 
-$1 $2 $3 # nombre del ejecutable, imagen, algoritmo
+#$1 $2 $3 # nombre del ejecutable, imagen, algoritmo
+
+echo ''
+nvprof --profile-api-trace none --metrics gld_efficiency ./blur_no_cache_l1 img/fing1_ruido.pgm

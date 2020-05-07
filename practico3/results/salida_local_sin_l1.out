@@ -1,0 +1,27 @@
+Usando gettimeofday para medir el tiempo
+Tiempo ajustar brillo CPU: 4.949951 ms
+
+Usando CUDA EVENTS para medir el tiempo
+Tiempo ajustar brillo GPU (Reserva de memoria): 0.210816 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host -> Device)): 0.505536 ms
+Tiempo ajustar brillo GPU (Kernel): 0.067360 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host <- Device)): 0.537472 ms
+Tiempo ajustar brillo GPU: 1.321184 ms
+
+Usando CUDA EVENTS para medir el tiempo
+Tiempo ajustar brillo GPU (Reserva de memoria): 0.246592 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host -> Device)): 0.519136 ms
+Tiempo ajustar brillo GPU (Kernel): 0.269888 ms
+Tiempo ajustar brillo GPU (Transferencia de datos (Host <- Device)): 0.582944 ms
+Tiempo ajustar brillo GPU: 1.618560 ms
+
+Usando gettimeofday para medir el tiempo
+Tiempo filtro Gaussiano CPU: 33.009033 ms
+
+Usando CUDA EVENTS para medir el tiempo
+Tiempo filtro gaussiano GPU (Reserva de memoria): 0.408320 ms
+Tiempo filtro gaussiano GPU (Transferencia de datos (Host -> Device)): 0.575072 ms
+Tiempo filtro gaussiano GPU (Kernel): 0.953152 ms
+Tiempo filtro gaussiano GPU (Transferencia de datos (Host <- Device)): 0.563008 ms
+Tiempo filtro gaussiano GPU: 2.499552 ms
+
