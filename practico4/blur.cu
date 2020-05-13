@@ -28,36 +28,42 @@ __global__ void blur_kernel(float* d_input, int width, int height, float* d_outp
 
     // Carga de la memoria compartida maximizando paralelismo entre hilos
     
+    // d_input auxiliary indexes
     int shifted_imgx = imgx - radius;
     int shifted_imgy = imgy - radius;
     int right_shifted_imgx = imgx - radius + blockDim.x;
     int under_shifted_imgy = imgy - radius + blockDim.y;
 
+    int shifted_image_position_y = shifted_imgy*width;
+    int under_shifted_image_position_y = under_shifted_imgy*width;
+
+
+    // block_memory auxiliary indexes
     int right_shifted_memory_index_x = threadIdx.x + blockDim.x;
     int under_shifted_memory_index_y = threadIdx.y + blockDim.y;
 
-    int memory_position_y = threadIdx.y*shared_mem_height
-    int under_shifted_memory_position_y = under_shifted_memory_index_y*shared_mem_height
+    int memory_position_y = threadIdx.y*shared_mem_height;
+    int under_shifted_memory_position_y = under_shifted_memory_index_y*shared_mem_height;
     
     // Cada hilo carga su lugar shifteado 2 posiciones hacia la izquierda y 2 hacia arriba (-2, -2)
     
     if (shifted_imgx >= 0 && shifted_imgx < width && shifted_imgy >= 0 && shifted_imgy < height) {
-        block_memory[memory_position_y + threadIdx.x] = d_input[(shifted_imgy*width) + shifted_imgx]
+        block_memory[memory_position_y + threadIdx.x] = d_input[shifted_image_position_y + shifted_imgx];
     }
     
     // Cada hilo carga su lugar shifteado (blockDim.x - 2) posiciones hacia la derecha y 2 hacia arriba (+29, -2)
     if (right_shifted_imgx >= 0 && right_shifted_imgx < width && shifted_imgy >= 0 && shifted_imgy < height) {
-        block_memory[memory_position_y + right_shifted_memory_index_x] = d_input[(shifted_imgy*width) + right_shifted_imgx]
+        block_memory[memory_position_y + right_shifted_memory_index_x] = d_input[shifted_image_position_y + right_shifted_imgx];
     }
 
     // Cada hilo carga su lugar shifteado 2 posiciones hacia la izquierda y (blockDim.y - 2) hacia abajo (-2, +29)
     if (shifted_imgx >= 0 && shifted_imgx < width && under_shifted_imgy >= 0 && under_shifted_imgy < height) {
-        block_memory[under_shifted_memory_position_y + threadIdx.x] = d_input[(under_shifted_imgy*width) + shifted_imgx]
+        block_memory[under_shifted_memory_position_y + threadIdx.x] = d_input[under_shifted_memory_position_y + shifted_imgx];
     }
 
     // Cada hilo carga su lugar shifteado (blockDim.x - 2) posiciones hacia la derecha y (blockDim.y - 2) hacia abajo (+29, +29)
     if (right_shifted_imgx >= 0 && right_shifted_imgx < width && under_shifted_imgy >= 0 && under_shifted_imgy < height) {
-        block_memory[under_shifted_memory_position_y + right_shifted_memory_index_x] = d_input[(under_shifted_imgy*width) + right_shifted_imgx]
+        block_memory[under_shifted_memory_position_y + right_shifted_memory_index_x] = d_input[under_shifted_memory_position_y + right_shifted_imgx];
     }
 
     __syncthreads();
