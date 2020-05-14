@@ -52,27 +52,39 @@ __global__ void blur_kernel(float* d_input, int width, int height, float* d_outp
 
     int memory_position_right = memory_position_y + right_shifted_memory_index_x;
     // Cada hilo carga su lugar shifteado (blockDim.x - 2) posiciones hacia la derecha y 2 hacia arriba (+29, -2)
-    if (memory_position_right >= 0 && memory_position_right < 1296 && right_shifted_imgx >= 0 && right_shifted_imgx < width && shifted_imgy >= 0 && shifted_imgy < height) {
-        block_memory[memory_position_right] = d_input[shifted_image_position_y + right_shifted_imgx];
+    if (memory_position_right >= 0 && memory_position_right < 1296) {
+        if(right_shifted_imgx >= 0 && right_shifted_imgx < width && shifted_imgy >= 0 && shifted_imgy < height) {
+            block_memory[memory_position_right] = d_input[shifted_image_position_y + right_shifted_imgx];
+        } else {
+            block_memory[memory_position_right] = 0;
+        }
     }
 
     int memory_position_under = under_shifted_memory_position_y + threadIdx.x;
     // Cada hilo carga su lugar shifteado 2 posiciones hacia la izquierda y (blockDim.y - 2) hacia abajo (-2, +29)
-    if (memory_position_under >= 0 && memory_position_under < 1296 && shifted_imgx >= 0 && shifted_imgx < width && under_shifted_imgy >= 0 && under_shifted_imgy < height) {
-        block_memory[under_shifted_memory_position_y + threadIdx.x] = d_input[under_shifted_image_position_y + shifted_imgx];
+    if (memory_position_under >= 0 && memory_position_under < 1296) {
+        if(shifted_imgx >= 0 && shifted_imgx < width && under_shifted_imgy >= 0 && under_shifted_imgy < height) {
+            block_memory[memory_position_under] = d_input[under_shifted_image_position_y + shifted_imgx];
+        } else {
+            block_memory[memory_position_under] = 0;
+        }
     }
     
     int memory_position_right_under = under_shifted_memory_position_y + right_shifted_memory_index_x;
     // Cada hilo carga su lugar shifteado (blockDim.x - 2) posiciones hacia la derecha y (blockDim.y - 2) hacia abajo (+29, +29)
-    if (memory_position_right_under >= 0 && memory_position_right_under < 1296 && right_shifted_imgx >= 0 && right_shifted_imgx < width && under_shifted_imgy >= 0 && under_shifted_imgy < height) {
-        block_memory[under_shifted_memory_position_y + right_shifted_memory_index_x] = d_input[under_shifted_image_position_y + right_shifted_imgx];
+    if (memory_position_right_under >= 0 && memory_position_right_under < 1296) {
+        if(right_shifted_imgx >= 0 && right_shifted_imgx < width && under_shifted_imgy >= 0 && under_shifted_imgy < height) {
+            block_memory[memory_position_right_under] = d_input[under_shifted_image_position_y + right_shifted_imgx];
+        } else {
+            block_memory[memory_position_right_under] = 0;
+        }
     }
 
     __syncthreads();
     
     float val_pixel = 0;
 
-    /*if(threadIdx.x == 0 && threadIdx.y == 0) {
+    /*if(threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 7 && blockIdx.y == 7) {
         for(int i = 0; i < shared_mem_width; i++) {
             for(int j = 0; j < shared_mem_width; j++) {
                 printf("%f, ", block_memory[i*shared_mem_width + j]);
@@ -81,26 +93,41 @@ __global__ void blur_kernel(float* d_input, int width, int height, float* d_outp
         }
         printf("\n");
     }*/
-
+    
+    __syncthreads();
+    
     int ix, iy, bindex;
-    int block_index = (threadIdx.y * blockDim.y) + threadIdx.x;
+    //int block_index = ((threadIdx.y + radius) * shared_mem_width) + (threadIdx.x + radius);
+
+    int memory_imgx = threadIdx.x + radius;
+    int memory_imgy = threadIdx.y + radius;
+
     // Aca aplicamos la máscara
-    for (int i = 0; i < m_size; i++) {
+    val_pixel = block_memory[(memory_imgy * shared_mem_width) + memory_imgx];
+    /*for (int i = 0; i < m_size; i++) {
         for (int j = 0; j < m_size; j++) {
 
-            ix = imgx + i - m_size / 2;
-            iy = imgy + j - m_size / 2;
+            //ix = threadIdx.x + i - m_size / 2;
+            //iy = threadIdx.y + j - m_size / 2;
 
-            bindex = block_index + (iy * blockDim.x) + ix; //((threadIdx.y + i - m_size / 2) * blockDim.y) + (threadIdx.x + j - m_size / 2);
+            ix = memory_imgx + i - m_size / 2;
+            iy = memory_imgy + j - m_size / 2;
+
+            bindex = (iy * shared_mem_width) + ix;
             
             // Altera el valor de un pixel, según sus vecinos.
             if (ix >= 0 && ix < width && iy >= 0 && iy < height) {
                 //val_pixel = val_pixel + d_input[(iy * width) + ix] * d_msk[i*m_size+j];
-                val_pixel = val_pixel +  block_memory[bindex] * d_msk[i*m_size+j];
+                if(bindex >= 0 && bindex < 1296) {
+                    val_pixel = val_pixel + block_memory[bindex] * d_msk[i*m_size+j];
+                } else {
+                    printf("%i \n", bindex);
+                }
+                
             }
 
         }
-    }
+    }*/
     
     if (imgx < width && imgy < height) {
         d_output[(imgy*width) + imgx] = val_pixel;
