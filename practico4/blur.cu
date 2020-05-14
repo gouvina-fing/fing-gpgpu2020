@@ -18,9 +18,10 @@ using namespace std;
 // Ej 2b-2) Copiar máscara con __constant__ y cudaMemcpyToSymbol (para que resida en mem constante) (y comparar tiempos con 2b-1)
 //          Acá estamos optimizando la memoria constante.
 //          La memoria constante es de 64KB, está optimizada para que si todo acceso del warp accede al mismo elem el acceso es óptimo
-__global__ void blur_kernel(float* d_input, int width, int height, float* d_output, float* d_msk, int m_size, int shared_mem_height, int shared_mem_size) {
+__global__ void blur_kernel(float* d_input, int width, int height, float* d_output, float* d_msk, int m_size, int shared_mem_width, int shared_mem_size) {
 
-    __shared__ float block_memory[shared_mem_size];
+    // TODO: For this to work we must make shared memory dynamic __shared__ float block_memory[shared_mem_size];
+    __shared__ float block_memory[1296];
     
     int imgx = (blockIdx.x * blockDim.x) + threadIdx.x;
     int imgy = (blockIdx.y * blockDim.y) + threadIdx.y;
@@ -31,69 +32,73 @@ __global__ void blur_kernel(float* d_input, int width, int height, float* d_outp
     // d_input auxiliary indexes
     int shifted_imgx = imgx - radius;
     int shifted_imgy = imgy - radius;
-    int right_shifted_imgx = imgx - radius + blockDim.x;
-    int under_shifted_imgy = imgy - radius + blockDim.y;
+    int right_shifted_imgx = shifted_imgx + blockDim.x;
+    int under_shifted_imgy = shifted_imgy + blockDim.y;
 
     int shifted_image_position_y = shifted_imgy*width;
     int under_shifted_image_position_y = under_shifted_imgy*width;
-
 
     // block_memory auxiliary indexes
     int right_shifted_memory_index_x = threadIdx.x + blockDim.x;
     int under_shifted_memory_index_y = threadIdx.y + blockDim.y;
 
-    int memory_position_y = threadIdx.y*shared_mem_height;
-    int under_shifted_memory_position_y = under_shifted_memory_index_y*shared_mem_height;
+    int memory_position_y = threadIdx.y*shared_mem_width;
+    int under_shifted_memory_position_y = under_shifted_memory_index_y*shared_mem_width;
     
     // Cada hilo carga su lugar shifteado 2 posiciones hacia la izquierda y 2 hacia arriba (-2, -2)
-    
     if (shifted_imgx >= 0 && shifted_imgx < width && shifted_imgy >= 0 && shifted_imgy < height) {
         block_memory[memory_position_y + threadIdx.x] = d_input[shifted_image_position_y + shifted_imgx];
     }
-    
+
+    int memory_position_right = memory_position_y + right_shifted_memory_index_x;
     // Cada hilo carga su lugar shifteado (blockDim.x - 2) posiciones hacia la derecha y 2 hacia arriba (+29, -2)
-    if (right_shifted_imgx >= 0 && right_shifted_imgx < width && shifted_imgy >= 0 && shifted_imgy < height) {
-        block_memory[memory_position_y + right_shifted_memory_index_x] = d_input[shifted_image_position_y + right_shifted_imgx];
+    if (memory_position_right >= 0 && memory_position_right < 1296 && right_shifted_imgx >= 0 && right_shifted_imgx < width && shifted_imgy >= 0 && shifted_imgy < height) {
+        block_memory[memory_position_right] = d_input[shifted_image_position_y + right_shifted_imgx];
     }
 
+    int memory_position_under = under_shifted_memory_position_y + threadIdx.x;
     // Cada hilo carga su lugar shifteado 2 posiciones hacia la izquierda y (blockDim.y - 2) hacia abajo (-2, +29)
-    if (shifted_imgx >= 0 && shifted_imgx < width && under_shifted_imgy >= 0 && under_shifted_imgy < height) {
-        block_memory[under_shifted_memory_position_y + threadIdx.x] = d_input[under_shifted_memory_position_y + shifted_imgx];
+    if (memory_position_under >= 0 && memory_position_under < 1296 && shifted_imgx >= 0 && shifted_imgx < width && under_shifted_imgy >= 0 && under_shifted_imgy < height) {
+        block_memory[under_shifted_memory_position_y + threadIdx.x] = d_input[under_shifted_image_position_y + shifted_imgx];
     }
-
+    
+    int memory_position_right_under = under_shifted_memory_position_y + right_shifted_memory_index_x;
     // Cada hilo carga su lugar shifteado (blockDim.x - 2) posiciones hacia la derecha y (blockDim.y - 2) hacia abajo (+29, +29)
-    if (right_shifted_imgx >= 0 && right_shifted_imgx < width && under_shifted_imgy >= 0 && under_shifted_imgy < height) {
-        block_memory[under_shifted_memory_position_y + right_shifted_memory_index_x] = d_input[under_shifted_memory_position_y + right_shifted_imgx];
+    if (memory_position_right_under >= 0 && memory_position_right_under < 1296 && right_shifted_imgx >= 0 && right_shifted_imgx < width && under_shifted_imgy >= 0 && under_shifted_imgy < height) {
+        block_memory[under_shifted_memory_position_y + right_shifted_memory_index_x] = d_input[under_shifted_image_position_y + right_shifted_imgx];
     }
 
     __syncthreads();
     
     float val_pixel = 0;
 
+    /*if(threadIdx.x == 0 && threadIdx.y == 0) {
+        for(int i = 0; i < shared_mem_width; i++) {
+            for(int j = 0; j < shared_mem_width; j++) {
+                printf("%f, ", block_memory[i*shared_mem_width + j]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }*/
+
+    int ix, iy, bindex;
+    int block_index = (threadIdx.y * blockDim.y) + threadIdx.x;
     // Aca aplicamos la máscara
     for (int i = 0; i < m_size; i++) {
         for (int j = 0; j < m_size; j++) {
 
-            int ix = imgx + i - m_size / 2;
-            int iy = imgy + j - m_size / 2;
+            ix = imgx + i - m_size / 2;
+            iy = imgy + j - m_size / 2;
+
+            bindex = block_index + (iy * blockDim.x) + ix; //((threadIdx.y + i - m_size / 2) * blockDim.y) + (threadIdx.x + j - m_size / 2);
             
             // Altera el valor de un pixel, según sus vecinos.
             if (ix >= 0 && ix < width && iy >= 0 && iy < height) {
-                val_pixel = val_pixel + d_input[(iy * width) + ix] * d_msk[i*m_size+j];
+                //val_pixel = val_pixel + d_input[(iy * width) + ix] * d_msk[i*m_size+j];
+                val_pixel = val_pixel +  block_memory[bindex] * d_msk[i*m_size+j];
             }
 
-            /*
-                Versión memoria compartida:
-                
-                int bindex = block_index + (iy * blockDim.x) + ix; //((threadIdx.y + i - m_size / 2) * blockDim.y) + (threadIdx.x + j - m_size / 2);
-                
-                if (bindex >= 0 && bindex < 1024) {
-                    val_pixel = val_pixel +  block_memory[bindex] * d_msk[i*m_size+j];
-                }
-                else if (ix >= 0 && ix < width && iy >= 0 && iy < height) {
-                    val_pixel = val_pixel + d_input[(iy * width) + ix] * d_msk[i*m_size+j];
-                }
-            */
         }
     }
     
@@ -143,14 +148,14 @@ void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[
     int block_size = 32; // TODO: Definir constante
     int block_amount_x = width / block_size + (width % block_size != 0); // Division with ceiling
     int block_amount_y = height / block_size + (height % block_size != 0); // Division with ceiling
-    int block_shared_mem_height = (block_size + m_size/2)
-    int block_shared_mem_size = block_shared_mem_height*block_shared_mem_height
+    int block_shared_mem_width = (block_size + 2*(m_size/2));
+    int block_shared_mem_size = block_shared_mem_width*block_shared_mem_width;
     dim3 tamGrid(block_amount_x, block_amount_y); // Grid dimension
     dim3 tamBlock(block_size, block_size); // Block dimension
 
     // Etapa 4 : Lanzar Kernel
     CLK_CUEVTS_START;
-    blur_kernel<<<tamGrid, tamBlock>>>(device_img_in, width, height, device_img_out, device_msk, m_size, block_shared_mem_height, block_shared_mem_size);
+    blur_kernel<<<tamGrid, tamBlock>>>(device_img_in, width, height, device_img_out, device_msk, m_size, block_shared_mem_width, block_shared_mem_size);
     // Sincronizar threads antes de parar timers
     cudaDeviceSynchronize(); 
     CLK_CUEVTS_STOP;
