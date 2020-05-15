@@ -13,17 +13,27 @@ __global__ void transpose_global_kernel(float* d_input, int width, int height, f
     int imgy = (blockIdx.y * blockDim.y) + threadIdx.y;
     if (imgx < width && imgy < height) {
         d_output[(imgx*height) + imgy] = d_input[(imgy*width) + imgx];
-        // d_output[(imgy*width) + imgx]
     }
 }
 
 // Ej 1a) Kernel 
 __global__ void transpose_shared_kernel(float* d_input, int width, int height, float* d_output) {
-    int imgx = (blockIdx.x * blockDim.x) + threadIdx.x;
-    int imgy = (blockIdx.y * blockDim.y) + threadIdx.y;
+    
+    // TODO: Tamaño constante
+    __shared__ float tile[1024];
+
+    unsigned int imgx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    unsigned int imgy = (blockIdx.y * blockDim.y) + threadIdx.y;
+
+    // Thread (tx,ty) lee pixel (x,y) (global) y escribe pixel (tx,ty) (compartida) 
+    tile[threadIdx.y * blockDim.y + threadIdx.x] = d_input[(imgy*width) + imgx];
+    __syncthreads();
+
+    // Thread (tx,ty) lee pixel (ty,tx) (compartida) y escribe pixel (y,x) (global)
     if (imgx < width && imgy < height) {
-        d_output[(imgx*height) + imgy] = d_input[(imgy*width) + imgx];
-        // d_output[(imgy*width) + imgx]
+        d_output[(imgx*height) + imgy] = tile[threadIdx.y * blockDim.y + threadIdx.x];
+        // Acceso por columna, no anda
+        // d_output[(imgx*height) + imgy] = tile[threadIdx.x * blockDim.x + threadIdx.y];
     }
 }
 
