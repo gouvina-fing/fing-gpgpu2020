@@ -15,16 +15,16 @@ int main(int argc, char** argv){
         path = argv[1];
 
 	CImg<float> image(path);
-	CImg<float> image_out(image.height(), image.width(),1,1,0);
+	CImg<float> image_out(image.height(), image.width(), 1,1,0);
 
 	float *img_matrix = image.data();
     float *img_out_matrix = image_out.data();
    	
 	transpose_global(img_matrix, image.width(), image.height(), img_out_matrix);
-   	image_out.save("output_transpose_global.ppm");
+   	image_out.save("output_transpose_global.pgm");
 
 	transpose_shared(img_matrix, image.width(), image.height(), img_out_matrix);
-   	image_out.save("output_transpose_shared.ppm");
+   	image_out.save("output_transpose_shared.pgm");
     
 	return 0;
 }
