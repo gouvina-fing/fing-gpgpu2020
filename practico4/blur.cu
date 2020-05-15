@@ -7,6 +7,14 @@
 
 using namespace std;
 
+#define TILE_WIDTH    32                              // Width of block size (32 threads)
+#define TILE_HEIGHT   32                              // Height of block size (32 threads)
+#define MASK_RADIUS   2                               // Mask radius
+#define MASK_DIAMETER (MASK_RADIUS*2 + 1)             // Mask diameter
+#define MASK_SIZE     (MASK_DIAMETER*MASK_DIAMETER)   // Mask size
+#define BLOCK_WIDTH   (TILE_WIDTH + (2*MASK_RADIUS))  // Width of shared memory block
+#define BLOCK_HEIGHT  (TILE_HEIGHT + (2*MASK_RADIUS)) // Height of shared memory block
+
 // CUDA Thread Indexing Cheatsheet https://cs.calvin.edu/courses/cs/374/CUDA/CUDA-Thread-Indexing-Cheatsheet.pdf
 // Ejemplo filtro https://www.nvidia.com/content/nvision2008/tech_presentations/Game_Developer_Track/NVISION08-Image_Processing_and_Video_with_CUDA.pdf
 // Ejemplo multiplicacion de matrices http://selkie.macalester.edu/csinparallel/modules/GPUProgramming/build/html/CUDA2D/CUDA2D.html
@@ -18,20 +26,22 @@ using namespace std;
 // Ej 2b-2) Copiar máscara con __constant__ y cudaMemcpyToSymbol (para que resida en mem constante) (y comparar tiempos con 2b-1)
 //          Acá estamos optimizando la memoria constante.
 //          La memoria constante es de 64KB, está optimizada para que si todo acceso del warp accede al mismo elem el acceso es óptimo
-__global__ void blur_kernel(float* d_input, int width, int height, float* d_output, float* d_msk, int m_size, int shared_mem_width, int shared_mem_size) {
+__global__ void blur_kernel(float* d_input, int width, int height, float* d_output, float* d_msk) {
 
-    // TODO: For this to work we must make shared memory dynamic __shared__ float block_memory[shared_mem_size];
-    __shared__ float block_memory[1296];
-    
+    __shared__ float block_memory[BLOCK_WIDTH][BLOCK_HEIGHT];
+
+    // Coordenada del pixel que al hilo le corresponde escribir
     int imgx = (blockIdx.x * blockDim.x) + threadIdx.x;
     int imgy = (blockIdx.y * blockDim.y) + threadIdx.y;
-    int radius = m_size/2;
 
     // Carga de la memoria compartida maximizando paralelismo entre hilos
     
+    // Para cargar la mascara de 36x36 con los bloques de 32x32 como indica la letra es necesario que
+    // el pixel que cada hilo lea y escriba en memoria esté shifteado -2,-2 (2 hacia arriba y hacia la izquierda)
+
     // d_input auxiliary indexes
-    int shifted_imgx = imgx - radius;
-    int shifted_imgy = imgy - radius;
+    int shifted_imgx = imgx - MASK_RADIUS;
+    int shifted_imgy = imgy - MASK_RADIUS;
     int right_shifted_imgx = shifted_imgx + blockDim.x;
     int under_shifted_imgy = shifted_imgy + blockDim.y;
 
@@ -39,96 +49,74 @@ __global__ void blur_kernel(float* d_input, int width, int height, float* d_outp
     int under_shifted_image_position_y = under_shifted_imgy*width;
 
     // block_memory auxiliary indexes
-    int right_shifted_memory_index_x = threadIdx.x + blockDim.x;
-    int under_shifted_memory_index_y = threadIdx.y + blockDim.y;
+    int memory_index_x = threadIdx.x;
+    int memory_index_y = threadIdx.y;
+    int right_shifted_memory_index_x = memory_index_x + blockDim.x;
+    int under_shifted_memory_index_y = memory_index_y + blockDim.y;
 
-    int memory_position_y = threadIdx.y*shared_mem_width;
-    int under_shifted_memory_position_y = under_shifted_memory_index_y*shared_mem_width;
-    
     // Cada hilo carga su lugar shifteado 2 posiciones hacia la izquierda y 2 hacia arriba (-2, -2)
     if (shifted_imgx >= 0 && shifted_imgx < width && shifted_imgy >= 0 && shifted_imgy < height) {
-        block_memory[memory_position_y + threadIdx.x] = d_input[shifted_image_position_y + shifted_imgx];
+        block_memory[memory_index_x][memory_index_y] = d_input[shifted_image_position_y + shifted_imgx];
     }
 
-    int memory_position_right = memory_position_y + right_shifted_memory_index_x;
     // Cada hilo carga su lugar shifteado (blockDim.x - 2) posiciones hacia la derecha y 2 hacia arriba (+29, -2)
-    if (memory_position_right >= 0 && memory_position_right < 1296) {
+    if (right_shifted_memory_index_x >= 0 && right_shifted_memory_index_x < BLOCK_WIDTH && memory_index_y >= 0 && memory_index_y < BLOCK_HEIGHT) {
         if(right_shifted_imgx >= 0 && right_shifted_imgx < width && shifted_imgy >= 0 && shifted_imgy < height) {
-            block_memory[memory_position_right] = d_input[shifted_image_position_y + right_shifted_imgx];
+            block_memory[right_shifted_memory_index_x][memory_index_y] = d_input[shifted_image_position_y + right_shifted_imgx];
         } else {
-            block_memory[memory_position_right] = 0;
+            block_memory[right_shifted_memory_index_x][memory_index_y] = 0;
         }
     }
 
-    int memory_position_under = under_shifted_memory_position_y + threadIdx.x;
     // Cada hilo carga su lugar shifteado 2 posiciones hacia la izquierda y (blockDim.y - 2) hacia abajo (-2, +29)
-    if (memory_position_under >= 0 && memory_position_under < 1296) {
+    if (memory_index_x >= 0 && memory_index_x < BLOCK_WIDTH && under_shifted_memory_index_y >= 0 && under_shifted_memory_index_y < BLOCK_HEIGHT) {
         if(shifted_imgx >= 0 && shifted_imgx < width && under_shifted_imgy >= 0 && under_shifted_imgy < height) {
-            block_memory[memory_position_under] = d_input[under_shifted_image_position_y + shifted_imgx];
+            block_memory[memory_index_x][under_shifted_memory_index_y] = d_input[under_shifted_image_position_y + shifted_imgx];
         } else {
-            block_memory[memory_position_under] = 0;
+            block_memory[memory_index_x][under_shifted_memory_index_y] = 0;
         }
     }
     
-    int memory_position_right_under = under_shifted_memory_position_y + right_shifted_memory_index_x;
     // Cada hilo carga su lugar shifteado (blockDim.x - 2) posiciones hacia la derecha y (blockDim.y - 2) hacia abajo (+29, +29)
-    if (memory_position_right_under >= 0 && memory_position_right_under < 1296) {
+    if (right_shifted_memory_index_x >= 0 && right_shifted_memory_index_x < BLOCK_WIDTH && under_shifted_memory_index_y >= 0 && under_shifted_memory_index_y < BLOCK_HEIGHT) {
         if(right_shifted_imgx >= 0 && right_shifted_imgx < width && under_shifted_imgy >= 0 && under_shifted_imgy < height) {
-            block_memory[memory_position_right_under] = d_input[under_shifted_image_position_y + right_shifted_imgx];
+            block_memory[right_shifted_memory_index_x][under_shifted_memory_index_y] = d_input[under_shifted_image_position_y + right_shifted_imgx];
         } else {
-            block_memory[memory_position_right_under] = 0;
+            block_memory[right_shifted_memory_index_x][under_shifted_memory_index_y] = 0;
         }
     }
 
     __syncthreads();
+
+    // Aplicación de la máscara (blur)
     
     float val_pixel = 0;
 
-    /*if(threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 7 && blockIdx.y == 7) {
-        for(int i = 0; i < shared_mem_width; i++) {
-            for(int j = 0; j < shared_mem_width; j++) {
-                printf("%f, ", block_memory[i*shared_mem_width + j]);
-            }
-            printf("\n");
-        }
-        printf("\n");
-    }*/
-    
-    __syncthreads();
-    
-    int ix, iy, bindex;
-    //int block_index = ((threadIdx.y + radius) * shared_mem_width) + (threadIdx.x + radius);
+    int ix, iy, full_image_ix, full_image_iy, mask_shift_x, mask_shift_y;
 
-    int memory_imgx = threadIdx.x + radius;
-    int memory_imgy = threadIdx.y + radius;
+    // Tomamos los indices del centro (32x32) de la imagen shifteando +2,+2 (hacia abajo y derecha)
+    int memory_imgx = threadIdx.x + MASK_RADIUS;
+    int memory_imgy = threadIdx.y + MASK_RADIUS;
 
-    // Aca aplicamos la máscara
-    val_pixel = block_memory[(memory_imgy * shared_mem_width) + memory_imgx];
-    /*for (int i = 0; i < m_size; i++) {
-        for (int j = 0; j < m_size; j++) {
-
-            //ix = threadIdx.x + i - m_size / 2;
-            //iy = threadIdx.y + j - m_size / 2;
-
-            ix = memory_imgx + i - m_size / 2;
-            iy = memory_imgy + j - m_size / 2;
-
-            bindex = (iy * shared_mem_width) + ix;
+    for (int i = -MASK_RADIUS; i < MASK_RADIUS; ++i) {
+        full_image_ix = imgx + i;
+        if (full_image_ix >= 0 && full_image_ix < width) {
+            ix = memory_imgx + i;
             
-            // Altera el valor de un pixel, según sus vecinos.
-            if (ix >= 0 && ix < width && iy >= 0 && iy < height) {
-                //val_pixel = val_pixel + d_input[(iy * width) + ix] * d_msk[i*m_size+j];
-                if(bindex >= 0 && bindex < 1296) {
-                    val_pixel = val_pixel + block_memory[bindex] * d_msk[i*m_size+j];
-                } else {
-                    printf("%i \n", bindex);
-                }
-                
-            }
-
-        }
-    }*/
+            for (int j = -MASK_RADIUS; j < MASK_RADIUS; ++j) {
+                full_image_iy = imgy + j;
     
+                if (full_image_iy >= 0 && full_image_iy < height) {
+                    iy = memory_imgy + j;
+
+                    // Altera el valor de un pixel, según sus vecinos.
+                    val_pixel = val_pixel + (block_memory[ix][iy] * d_msk[(i + MASK_RADIUS)*MASK_DIAMETER + j + MASK_RADIUS]);
+                }
+            }
+        }
+    }
+    
+    // Escribimos la salida
     if (imgx < width && imgy < height) {
         d_output[(imgy*width) + imgx] = val_pixel;
     }
@@ -148,7 +136,7 @@ void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[
 
     // Reserva en CPU
     unsigned int size = width * height * sizeof(float);
-    unsigned int size_msk = 25 * sizeof(float);
+    unsigned int size_msk = MASK_SIZE * sizeof(float);
     float * device_img_in = (float *)malloc(size);
     float * device_img_out = (float *)malloc(size);
     float * device_msk = (float *)malloc(size_msk);
@@ -172,17 +160,15 @@ void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[
     t_total = t_total + t_elap;
 
     // Etapa 3: Definir grilla
-    int block_size = 32; // TODO: Definir constante
-    int block_amount_x = width / block_size + (width % block_size != 0); // Division with ceiling
-    int block_amount_y = height / block_size + (height % block_size != 0); // Division with ceiling
-    int block_shared_mem_width = (block_size + 2*(m_size/2));
-    int block_shared_mem_size = block_shared_mem_width*block_shared_mem_width;
-    dim3 tamGrid(block_amount_x, block_amount_y); // Grid dimension
-    dim3 tamBlock(block_size, block_size); // Block dimension
+    int amount_of_blocks_x = width / TILE_WIDTH + (width % TILE_WIDTH != 0); // Division with ceiling
+    int amount_of_blocks_y = height / TILE_HEIGHT + (height % TILE_HEIGHT != 0); // Division with ceiling
+
+    dim3 tamGrid(amount_of_blocks_x, amount_of_blocks_y); // Grid dimension
+    dim3 tamBlock(TILE_WIDTH, TILE_HEIGHT); // Block dimension
 
     // Etapa 4 : Lanzar Kernel
     CLK_CUEVTS_START;
-    blur_kernel<<<tamGrid, tamBlock>>>(device_img_in, width, height, device_img_out, device_msk, m_size, block_shared_mem_width, block_shared_mem_size);
+    blur_kernel<<<tamGrid, tamBlock>>>(device_img_in, width, height, device_img_out, device_msk);
     // Sincronizar threads antes de parar timers
     cudaDeviceSynchronize(); 
     CLK_CUEVTS_STOP;
