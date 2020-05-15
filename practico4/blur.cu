@@ -92,25 +92,24 @@ __global__ void blur_kernel(float* d_input, int width, int height, float* d_outp
     
     float val_pixel = 0;
 
-    int ix, iy, full_image_ix, full_image_iy, mask_shift_x, mask_shift_y;
+    int ix, iy, full_image_ix, full_image_iy;
 
     // Tomamos los indices del centro (32x32) de la imagen shifteando +2,+2 (hacia abajo y derecha)
     int memory_imgx = threadIdx.x + MASK_RADIUS;
     int memory_imgy = threadIdx.y + MASK_RADIUS;
 
-    for (int i = -MASK_RADIUS; i < MASK_RADIUS; ++i) {
+    for (int i = -MASK_RADIUS; i <= MASK_RADIUS; ++i) {
         full_image_ix = imgx + i;
         if (full_image_ix >= 0 && full_image_ix < width) {
             ix = memory_imgx + i;
             
-            for (int j = -MASK_RADIUS; j < MASK_RADIUS; ++j) {
+            for (int j = -MASK_RADIUS; j <= MASK_RADIUS; ++j) {
                 full_image_iy = imgy + j;
-    
                 if (full_image_iy >= 0 && full_image_iy < height) {
                     iy = memory_imgy + j;
 
                     // Altera el valor de un pixel, según sus vecinos.
-                    val_pixel = val_pixel + (block_memory[ix][iy] * d_msk[(i + MASK_RADIUS)*MASK_DIAMETER + j + MASK_RADIUS]);
+                    val_pixel += block_memory[ix][iy] * d_msk[(i + MASK_RADIUS)*MASK_DIAMETER + j + MASK_RADIUS];
                 }
             }
         }
