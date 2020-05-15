@@ -4,6 +4,7 @@
 using namespace cimg_library;
 
 void transpose_global(float * image, int width, int height, float * image_out);
+void transpose_shared(float * image, int width, int height, float * image_out);
     
 int main(int argc, char** argv){
 
@@ -21,6 +22,9 @@ int main(int argc, char** argv){
    	
 	transpose_global(img_matrix, image.width(), image.height(), img_out_matrix);
    	image_out.save("output_transpose_global.ppm");
+
+	transpose_shared(img_matrix, image.width(), image.height(), img_out_matrix);
+   	image_out.save("output_transpose_shared.ppm");
     
 	return 0;
 }
