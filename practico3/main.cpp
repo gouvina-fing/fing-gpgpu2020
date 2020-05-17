@@ -15,6 +15,7 @@ int main(int argc, char** argv){
 	if (argc < 2) printf("Invocar como: './blur nombre_archivo'.\n");
     else
         path = argv[1];
+		algorithm = atoi(argv[2]);
 
 
     // Inicializamos la mascara. El color del pixel original se conserva (más peso), pero los pixeles vecinos inciden en su valor en menor medida
