@@ -403,7 +403,7 @@ void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[
     CUDA_CHK(cudaMalloc((void**)& device_img_in, size));
     CUDA_CHK(cudaMalloc((void**)& device_img_out, size));
 
-    if(algorithm != 3) {
+    if(algorithm != 4) {
         device_msk = (float *)malloc(size_msk);
         CUDA_CHK(cudaMalloc((void**)& device_msk, size_msk));
     }
@@ -416,7 +416,7 @@ void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[
     CLK_CUEVTS_START;
     CUDA_CHK(cudaMemcpy(device_img_in, img_in, size, cudaMemcpyHostToDevice)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
 
-    if(algorithm != 3) {
+    if(algorithm != 4) {
         // Transfiero la mascara a la memoria de la GPU
         CUDA_CHK(cudaMemcpy(device_msk, msk, size_msk, cudaMemcpyHostToDevice)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
     } else {
@@ -440,19 +440,19 @@ void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[
     CLK_CUEVTS_START;
     switch(algorithm) {
         // Práctico 3) Kernel con memoria global
-        case 0:
+        case 1:
             blur_kernel_global<<<tamGrid, tamBlock>>>(device_img_in, width, height, device_img_out, device_msk);
             break;
         // Ej 2a) Kernel con memoria compartida
-        case 1:
+        case 2:
             blur_kernel_a<<<tamGrid, tamBlock>>>(device_img_in, width, height, device_img_out, device_msk);
             break;
         // Ej 2b1) Kernel con memoria compartida y optimizando la máscara cómo read_only y restricted pointer.
-        case 2:
+        case 3:
             blur_kernel_b<<<tamGrid, tamBlock>>>(device_img_in, width, height, device_img_out, device_msk);
             break;
         // Ej 2b2) Kernel con con memoria compartida y almacenando la máscara en la memoria constante de la GPU
-        case 3:
+        case 4:
             blur_kernel_c<<<tamGrid, tamBlock>>>(device_img_in, width, height, device_img_out);
             break;
     }
