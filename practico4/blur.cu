@@ -386,11 +386,11 @@ void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[
     }
     
     // Auxiliar para contar tiempo total
-    float t_total = 0;
+    // float t_total = 0;
     
     // Etapa 1: Reserva de Memoria
-    CLK_CUEVTS_INIT;
-    CLK_CUEVTS_START;
+    // CLK_CUEVTS_INIT;
+    // CLK_CUEVTS_START;
 
     // Reserva en CPU
     unsigned int size = width * height * sizeof(float);
@@ -407,13 +407,13 @@ void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[
         device_msk = (float *)malloc(size_msk);
         CUDA_CHK(cudaMalloc((void**)& device_msk, size_msk));
     }
-    CLK_CUEVTS_STOP;
-    CLK_CUEVTS_ELAPSED;
-    printf("Tiempo filtro gaussiano GPU (Reserva de memoria): %f ms\n", t_elap);
-    t_total = t_total + t_elap;
+    // CLK_CUEVTS_STOP;
+    // CLK_CUEVTS_ELAPSED;
+    // printf("Tiempo filtro gaussiano GPU (Reserva de memoria): %f ms\n", t_elap);
+    // t_total = t_total + t_elap;
     
     // Etapa 2: Transferencia de datos (Host -> Device)
-    CLK_CUEVTS_START;
+    // CLK_CUEVTS_START;
     CUDA_CHK(cudaMemcpy(device_img_in, img_in, size, cudaMemcpyHostToDevice)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
 
     if(algorithm != 4) {
@@ -424,10 +424,10 @@ void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[
         CUDA_CHK(cudaMemcpyToSymbol(D_MASK, msk, size_msk, 0, cudaMemcpyHostToDevice));
     }
     
-    CLK_CUEVTS_STOP;
-    CLK_CUEVTS_ELAPSED;
-    printf("Tiempo filtro gaussiano GPU (Transferencia de datos (Host -> Device)): %f ms\n", t_elap);
-    t_total = t_total + t_elap;
+    // CLK_CUEVTS_STOP;
+    // CLK_CUEVTS_ELAPSED;
+    // printf("Tiempo filtro gaussiano GPU (Transferencia de datos (Host -> Device)): %f ms\n", t_elap);
+    // t_total = t_total + t_elap;
 
     // Etapa 3: Definir grilla
     int amount_of_blocks_x = width / TILE_WIDTH + (width % TILE_WIDTH != 0); // Division with ceiling
@@ -437,7 +437,7 @@ void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[
     dim3 tamBlock(TILE_WIDTH, TILE_HEIGHT); // Block dimension
 
     // Etapa 4 : Lanzar Kernel
-    CLK_CUEVTS_START;
+    // CLK_CUEVTS_START;
     switch(algorithm) {
         // Práctico 3) Kernel con memoria global
         case 1:
@@ -459,20 +459,20 @@ void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[
     
     // Sincronizar threads antes de parar timers
     cudaDeviceSynchronize(); 
-    CLK_CUEVTS_STOP;
-    CLK_CUEVTS_ELAPSED;
-    printf("Tiempo filtro gaussiano GPU (Kernel): %f ms\n", t_elap);
-    t_total = t_total + t_elap;
+    // CLK_CUEVTS_STOP;
+    // CLK_CUEVTS_ELAPSED;
+    // printf("Tiempo filtro gaussiano GPU (Kernel): %f ms\n", t_elap);
+    // t_total = t_total + t_elap;
 
     // Etapa 5: Transferencia de Datos (Device -> Host)
-    CLK_CUEVTS_START;
+    // CLK_CUEVTS_START;
     CUDA_CHK(cudaMemcpy(img_out, device_img_out, size, cudaMemcpyDeviceToHost)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
-    CLK_CUEVTS_STOP;
-    CLK_CUEVTS_ELAPSED;
-    printf("Tiempo filtro gaussiano GPU (Transferencia de datos (Host <- Device)): %f ms\n", t_elap);
-    t_total = t_total + t_elap;
-    printf("Tiempo filtro gaussiano GPU: %f ms\n", t_total);
-    printf("\n");
+    // CLK_CUEVTS_STOP;
+    // CLK_CUEVTS_ELAPSED;
+    // printf("Tiempo filtro gaussiano GPU (Transferencia de datos (Host <- Device)): %f ms\n", t_elap);
+    // t_total = t_total + t_elap;
+    // printf("Tiempo filtro gaussiano GPU: %f ms\n", t_total);
+    // printf("\n");
 
     // Etapa 6: Liberación de Memoria
     CUDA_CHK(cudaFree(device_img_in));

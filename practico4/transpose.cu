@@ -152,11 +152,11 @@ void transpose_gpu(float * img_in, int width, int height, float * img_out, int b
     }
 
     // Auxiliar para contar tiempo total
-    float t_total = 0;
+    // float t_total = 0;
     
     // Etapa 1: Reserva de Memoria
-    CLK_CUEVTS_INIT;
-    CLK_CUEVTS_START;
+    // CLK_CUEVTS_INIT;
+    // CLK_CUEVTS_START;
     // Reserva en CPU
     unsigned int size = width * height * sizeof(float);
     float * device_img_in = (float *)malloc(size);
@@ -164,18 +164,18 @@ void transpose_gpu(float * img_in, int width, int height, float * img_out, int b
     // Reserva en GPU
     CUDA_CHK(cudaMalloc((void**)& device_img_in, size));
     CUDA_CHK(cudaMalloc((void**)& device_img_out, size));
-    CLK_CUEVTS_STOP;
-    CLK_CUEVTS_ELAPSED;
-    printf("Tiempo transposicion GPU (Reserva de memoria): %f ms\n", t_elap);
-    t_total = t_total + t_elap;
+    // CLK_CUEVTS_STOP;
+    // CLK_CUEVTS_ELAPSED;
+    // printf("Tiempo transposicion GPU (Reserva de memoria): %f ms\n", t_elap);
+    // t_total = t_total + t_elap;
     
     // Etapa 2: Transferencia de datos (Host -> Device)
-    CLK_CUEVTS_START;
+    // CLK_CUEVTS_START;
     CUDA_CHK(cudaMemcpy(device_img_in, img_in, size, cudaMemcpyHostToDevice)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
-    CLK_CUEVTS_STOP;
-    CLK_CUEVTS_ELAPSED;
-    printf("Tiempo transposicion GPU (Transferencia de datos (Host -> Device)): %f ms\n", t_elap);
-    t_total = t_total + t_elap;
+    // CLK_CUEVTS_STOP;
+    // CLK_CUEVTS_ELAPSED;
+    // printf("Tiempo transposicion GPU (Transferencia de datos (Host -> Device)): %f ms\n", t_elap);
+    // t_total = t_total + t_elap;
 
     // Etapa 3: Definir grilla
     int block_amount_x = width / block_size + (width % block_size != 0); // Division with ceiling
@@ -184,7 +184,7 @@ void transpose_gpu(float * img_in, int width, int height, float * img_out, int b
     dim3 tamBlock(block_size, block_size); // Block dimension
 
     // Etapa 4 : Lanzar Kernel
-    CLK_CUEVTS_START;
+    // CLK_CUEVTS_START;
     switch(algorithm) {
         case 1:
             transpose_global_kernel<<<tamGrid, tamBlock>>>(device_img_in, width, height, device_img_out);
@@ -206,20 +206,20 @@ void transpose_gpu(float * img_in, int width, int height, float * img_out, int b
     }
     // Sincronizar threads antes de parar timers
     cudaDeviceSynchronize(); 
-    CLK_CUEVTS_STOP;
-    CLK_CUEVTS_ELAPSED;
-    printf("Tiempo transposicion GPU (Kernel): %f ms\n", t_elap);
-    t_total = t_total + t_elap;
+    // CLK_CUEVTS_STOP;
+    // CLK_CUEVTS_ELAPSED;
+    // printf("Tiempo transposicion GPU (Kernel): %f ms\n", t_elap);
+    // t_total = t_total + t_elap;
 
     // Etapa 5: Transferencia de Datos (Device -> Host)
-    CLK_CUEVTS_START;
+    // CLK_CUEVTS_START;
     CUDA_CHK(cudaMemcpy(img_out, device_img_out, size, cudaMemcpyDeviceToHost)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
-    CLK_CUEVTS_STOP;
-    CLK_CUEVTS_ELAPSED;
-    printf("Tiempo transposicion GPU (Transferencia de datos (Host <- Device)): %f ms\n", t_elap);
-    t_total = t_total + t_elap;
-    printf("Tiempo transposicion GPU: %f ms\n", t_total);
-    printf("\n");
+    // CLK_CUEVTS_STOP;
+    // CLK_CUEVTS_ELAPSED;
+    // printf("Tiempo transposicion GPU (Transferencia de datos (Host <- Device)): %f ms\n", t_elap);
+    // t_total = t_total + t_elap;
+    // printf("Tiempo transposicion GPU: %f ms\n", t_total);
+    // printf("\n");
 
     // Etapa 6: Liberación de Memoria
     CUDA_CHK(cudaFree(device_img_in));
