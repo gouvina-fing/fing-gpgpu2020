@@ -122,7 +122,10 @@ void transpose_gpu(float * img_in, int width, int height, float * img_out, int b
     switch(algorithm) {
         case 1:
             printf("\n");
-            printf("-> Kernel con memoria global\n");
+            if (block_size == 16)
+                printf("-> Kernel con memoria global, tamaño de bloque = 16\n");
+            else
+                printf("-> Kernel con memoria global, tamaño de bloque = 32\n");
             break;
         case 2:
             printf("\n");

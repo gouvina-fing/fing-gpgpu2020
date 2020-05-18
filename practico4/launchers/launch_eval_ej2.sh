@@ -8,7 +8,7 @@
 #SBATCH --gres=gpu:1
 # #SBATCH --mail-type=ALL
 # #SBATCH --mail-user=renzo.gambone@fing.edu.uy
-#SBATCH -o salida_cluster_l1_nvprof_global.out
+#SBATCH -o salida_cluster_l1_b2.out
 
 export PATH=$PATH:/usr/local/cuda/bin
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64
@@ -24,7 +24,3 @@ nvidia-smi
 make ej2
 
 nvprof --print-gpu-trace ./ej2.x $1 $2 --benchmark -numdevices=1 # imagen, algoritmo
-
-#make ej2
-
-#nvprof --print-gpu-trace ./ej2_no_l1.x $1 $2 --benchmark -numdevices=1 # imagen, algoritmo
