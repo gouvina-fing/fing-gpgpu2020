@@ -356,32 +356,33 @@ void blur_gpu(float * img_in, int width, int height, float * img_out, float msk[
 
     switch(algorithm) {
         // Práctico 3) Kernel con memoria global
-        case 0:
-            printf("Práctico 3) Kernel con memoria global.\n");
+        case 1:
             printf("\n");
+            printf("-> Kernel con memoria global\n");
             break;
         // Ej 2a) Kernel con memoria compartida
-        case 1:
-            printf("Ej 2a) Kernel con memoria compartida\n");
+        case 2:
             printf("\n");
+            printf("-> Kernel con memoria compartida\n");
             break;
         // Ej 2b1) Kernel con memoria compartida y optimizando la máscara cómo read_only y restricted pointer.
-        case 2:
-            printf("Ej 2b1) Kernel con memoria compartida y optimizando la máscara cómo read_only y restricted pointer\n");
-            printf("\n");
+        case 3:
+            printf("\n");    
+            printf("-> Kernel con memoria compartida y optimizando la máscara cómo read_only y restricted pointer\n");
             break;
         // Ej 2b2) Kernel con con memoria compartida y almacenando la máscara en la memoria constante de la GPU
-        case 3:
-            printf("Ej 2b2) Kernel con con memoria compartida y almacenando la máscara en la memoria constante de la GPU\n");
+        case 4:
             printf("\n");
+            printf("-> Kernel con memoria compartida y almacenando la máscara en memoria constante\n");
             break;
         default:
-            printf("Algoritmo seleccionado invalido. Seleccionar uno de los siguientes:\n");
-            printf("\t 0 - Práctico 3) Kernel con memoria global\n");
-            printf("\t 1 - Ej 2a) Kernel con memoria compartida\n");
-            printf("\t 2 - Ej 2b1) Kernel con memoria compartida y optimizando la máscara cómo read_only y restricted pointer.\n");
-            printf("\t 3 - Ej 2b2) Kernel con con memoria compartida y almacenando la máscara en la memoria constante de la GPU\n");
-            printf("\n");
+            printf("Invocar como: './ej2.x nombre_archivo, algoritmo'\n");
+            printf("-> Algoritmo:\n");
+            printf("\t 1 - Kernel con memoria global\n");
+            printf("\t 2 - Kernel con memoria compartida\n");
+            printf("\t 3 - Kernel con memoria compartida y mascara read_only con restricted pointer\n");
+            printf("\t 4 - Kernel con memoria compartida y mascara en memoria constante\n");
+            printf("\t 0 - Todos los algoritmos\n");
     }
     
     // Auxiliar para contar tiempo total

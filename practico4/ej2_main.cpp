@@ -12,13 +12,13 @@ int main(int argc, char** argv){
 	int algorithm;
 
 	if (argc < 3) {
-		printf("Invocar como: './blur.x nombre_archivo, algoritmo'. En donde algoritmo es:");
-		printf("\t 0 - Práctico 3) Kernel con memoria global");
-		printf("\t 1 - Ej 2a) Kernel con memoria compartida");
-		printf("\t 2 - Ej 2b1) Kernel con memoria compartida y");
-		printf("\t 3 - Ej 2b2) Kernel con con memoria compartida y ");
-		printf("\t 4 - Todos los algoritmos");
-		printf("\n");
+		printf("Invocar como: './ej2.x nombre_archivo, algoritmo'\n");
+        printf("-> Algoritmo:\n");
+		printf("\t 1 - Kernel con memoria global\n");
+		printf("\t 2 - Kernel con memoria compartida\n");
+		printf("\t 3 - Kernel con memoria compartida y mascara read_only con restricted pointer\n");
+		printf("\t 4 - Kernel con memoria compartida y mascara en memoria constante\n");
+		printf("\t 0 - Todos los algoritmos\n");
 	} else {
 		path = argv[1];
 		algorithm = atoi(argv[2]);
@@ -37,43 +37,43 @@ int main(int argc, char** argv){
 	float *img_matrix = image.data();
     float *img_out_matrix = image_out.data();
 
-	float elapsed = 0;
-
-	blur_cpu(img_matrix, image.width(), image.height(), img_out_matrix, mascara, 5);
-   	image_out.save("output_blur_cpu.ppm");
-
 	switch(algorithm) {
-        // Práctico 3) Kernel con memoria global
-        case 0:
+        case 1:
             blur_gpu(img_matrix, image.width(), image.height(), img_out_matrix, mascara, algorithm);
    			image_out.save("output_blur_gpu_global.ppm");
             break;
-        // Ej 2a) Kernel con memoria compartida
-        case 1:
-            
+        case 2:
 			blur_gpu(img_matrix, image.width(), image.height(), img_out_matrix, mascara, algorithm);
    			image_out.save("output_blur_gpu_shared_a.ppm");
             break;
-        // Ej 2b1) Kernel con memoria compartida y optimizando la máscara cómo read_only y restricted pointer
-        case 2:
-			
+        case 3:
             blur_gpu(img_matrix, image.width(), image.height(), img_out_matrix, mascara, algorithm);
    			image_out.save("output_blur_gpu_shared_b1.ppm");
             break;
-        // Ej 2b2) Kernel con con memoria compartida y almacenando la máscara en la memoria constante de la GPU
-        case 3:
-			
+        case 4:
             blur_gpu(img_matrix, image.width(), image.height(), img_out_matrix, mascara, algorithm);
    			image_out.save("output_blur_gpu_shared_b2.ppm");
             break;
+        case 0:
+            blur_cpu(img_matrix, image.width(), image.height(), img_out_matrix, mascara, 5);
+   	        image_out.save("output_blur_cpu.ppm");
+            blur_gpu(img_matrix, image.width(), image.height(), img_out_matrix, mascara, 1);
+   			image_out.save("output_blur_gpu_global.ppm");
+            blur_gpu(img_matrix, image.width(), image.height(), img_out_matrix, mascara, 2);
+   			image_out.save("output_blur_gpu_shared_a.ppm");
+            blur_gpu(img_matrix, image.width(), image.height(), img_out_matrix, mascara, 3);
+   			image_out.save("output_blur_gpu_shared_b1.ppm");
+            blur_gpu(img_matrix, image.width(), image.height(), img_out_matrix, mascara, 4);
+   			image_out.save("output_blur_gpu_shared_b2.ppm");
+            break;
         default:
-            printf("Algoritmo seleccionado invalido.\n");
-            printf("Invocar como: './ej2.x nombre_archivo, algoritmo'. En donde algoritmo es:\n");
-            printf("\t 0 - Práctico 3) Kernel con memoria global\n");
-            printf("\t 1 - Ej 2a) Kernel con memoria compartida\n");
-            printf("\t 2 - Ej 2b1) Kernel con memoria compartida y optimizando la máscara cómo read_only y restricted pointer\n");
-            printf("\t 3 - Ej 2b2) Kernel con con memoria compartida y almacenando la máscara en la memoria constante de la GPU\n");
-            printf("\n");
+            printf("Invocar como: './ej2.x nombre_archivo, algoritmo'\n");
+            printf("-> Algoritmo:\n");
+            printf("\t 1 - Kernel con memoria global\n");
+            printf("\t 2 - Kernel con memoria compartida\n");
+            printf("\t 3 - Kernel con memoria compartida y mascara read_only con restricted pointer\n");
+            printf("\t 4 - Kernel con memoria compartida y mascara en memoria constante\n");
+            printf("\t 0 - Todos los algoritmos\n");
     }
    	
 	return 0;
