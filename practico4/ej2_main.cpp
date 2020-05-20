@@ -25,11 +25,17 @@ int main(int argc, char** argv){
 	}
 
     // Inicializamos la mascara. El color del pixel original se conserva (más peso), pero los pixeles vecinos inciden en su valor en menor medida
-    float mascara[25]={1, 4, 6, 4, 1,
-                       4,16,24,16, 4,
-                       6,24,36,24, 6,
-                       4,16,24,16, 4,
-                       1, 4, 6, 4, 1};
+    float mascara[121]={0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
+                        0.1, 0.1, 0.1, 0.1, 0.1, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1,
+                        0.1, 0.1, 0.1, 0.1, 0.5, 1  , 0.5, 0.1, 0.1, 0.1, 0.1,
+                        0.1, 0.1, 0.1, 0.5, 2  , 3  , 2  , 0.5, 0.1, 0.1, 0.1,
+                        0.1, 0.1, 0.5, 2  , 8  , 24 , 8  , 2  , 0.5, 0.1, 0.1,
+                        0.1, 0.2, 1  , 3  , 24 , 36 , 24 , 3  , 1  , 0.2, 0.1,
+                        0.1, 0.1, 0.5, 2  , 8  , 24 , 8  , 2  , 0.5, 0.1, 0.1,
+                        0.1, 0.1, 0.1, 0.5, 2  , 3  , 2  , 0.5, 0.1, 0.1, 0.1,
+                        0.1, 0.1, 0.1, 0.1, 0.5, 1  , 0.5, 0.1, 0.1, 0.1, 0.1,
+                        0.1, 0.1, 0.1, 0.1, 0.1, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1,
+                        0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
 
 	CImg<float> image(path);
 	CImg<float> image_out(image.width(), image.height(),1,1,0);
@@ -55,7 +61,7 @@ int main(int argc, char** argv){
    			image_out.save("output_blur_gpu_shared_b2.ppm");
             break;
         case 0:
-            blur_cpu(img_matrix, image.width(), image.height(), img_out_matrix, mascara, 5);
+            blur_cpu(img_matrix, image.width(), image.height(), img_out_matrix, mascara, 11);
    	        image_out.save("output_blur_cpu.ppm");
             blur_gpu(img_matrix, image.width(), image.height(), img_out_matrix, mascara, 1);
    			image_out.save("output_blur_gpu_global.ppm");

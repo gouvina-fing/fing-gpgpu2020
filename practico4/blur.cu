@@ -9,13 +9,13 @@ using namespace std;
 
 #define TILE_WIDTH    32                              // Width of block size (32 threads)
 #define TILE_HEIGHT   32                              // Height of block size (32 threads)
-#define MASK_RADIUS   2                               // Mask radius
+#define MASK_RADIUS   5                               // Mask radius
 #define MASK_DIAMETER (MASK_RADIUS*2 + 1)             // Mask diameter
 #define MASK_SIZE     (MASK_DIAMETER*MASK_DIAMETER)   // Mask size
 #define BLOCK_WIDTH   (TILE_WIDTH + (2*MASK_RADIUS))  // Width of shared memory block
 #define BLOCK_HEIGHT  (TILE_HEIGHT + (2*MASK_RADIUS)) // Height of shared memory block
 
-__constant__ float D_MASK[25];
+__constant__ float D_MASK[121];
 
 // CUDA Thread Indexing Cheatsheet https://cs.calvin.edu/courses/cs/374/CUDA/CUDA-Thread-Indexing-Cheatsheet.pdf
 // Ejemplo filtro https://www.nvidia.com/content/nvision2008/tech_presentations/Game_Developer_Track/NVISION08-Image_Processing_and_Video_with_CUDA.pdf

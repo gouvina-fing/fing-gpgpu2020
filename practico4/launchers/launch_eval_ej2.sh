@@ -8,7 +8,7 @@
 #SBATCH --gres=gpu:1
 # #SBATCH --mail-type=ALL
 # #SBATCH --mail-user=renzo.gambone@fing.edu.uy
-#SBATCH -o salida_cluster_l1_b2.out
+#SBATCH -o salida_cluster_l1_global.out
 
 export PATH=$PATH:/usr/local/cuda/bin
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64
