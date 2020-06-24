@@ -4,11 +4,15 @@
 // C = βC + αA × B
 // Si queremos restarle a C la multiplicación de Axb alpha se define como negativo
 
-// 1.b
-// Cada bloque calcula un tile de C, cada hilo un elemento de C, van pasando tiles de A y B a memoria compartida, multiplicando y cargando otro.
-// Cada hilo guarda su resultado de C en un registro
-// Asumimos que los tamaños del tile siempre son multiplos del tamaño de bloque
-// https://spatial-lang.org/gemm
+// lda, ldb y ldc tienen la cantidad de elementos por fila (width) de cada matriz (lda ≥ k, ldb ≥ n y ldc ≥ n)
+// En gral A tiene tantas columnas como lda, B como ldb, etc.
+// El sentido de los mismos es si queremos trabajar con submatrices.
+// Ejemplo: A 1000x1000, B 1000x1000, C 100x100 C = A'*B' (Con A' y B' las sumatrices de 100x100 de arriba a la izq)
+//          m = 100, n = 100, p = 100, lda = 1000, ldb = 1000, ldc = 100
+void dgemm_cpu(int m, int n, int p, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc);
+
+// NOTE: Para la experimentación se usará lda = k, ldb = n, ldc = n, C = 0, alpha = beta = 1.
+// Sin embargo para DTRSM importará una implementación genérica
 void dgemm_gpu(int algorithm, int m, int n, int p, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc);
 
 // Resolución de un conjunto de sistemas de ecuaciones lineales triangulares (con un sitema ya "escalerizado"). Usando doble presición.
@@ -27,31 +31,46 @@ int print_trace_format() {
     return 1;
 }
 
-// lda, ldb y ldc dicen cuantos elementos hay en cada fila de los arreglos bidimensionales que contengan estas matrices
-// En gral A tiene tantas columnas como lda, B como ldb, etc.
-// El sentido de los mismos es si queremos trabajar con submatrices.
-// lda ≥ k, ldb ≥ n y ldc ≥ n
-void dgemm_cpu(int m, int n, int p, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc) {
-    int i,j,k;
-    double alpha_a;
+void random_vector(double *A, int n) {
+    for (unsigned int i = 0; i < n; ++i) A[i] = (double)rand() / (double)RAND_MAX;
+}
 
-    for(i = 0; i < m; ++i) {
-        for(j = 0; j < n; ++j)
-            C[i*ldc + j] *= beta;
+void zero_vector(double *A, int n) {
+    for (unsigned int i = 0; i < n; ++i) A[i] = 0;
+}
 
-        for(k = 0; k < p; ++k) {
-            alpha_a = alpha*A[i*lda + k];
-            for(j = 0; j < n; ++j)
-                C[i*ldc + j] += alpha_a*B[k*ldb + j];
-        }
+// Helper for debugging
+void print_matrix_from_vector(double * C, int m, int n) {
+    int row;
+    for (unsigned int i = 0; i < m; ++i) {
+        printf("[");
+        row = i*n;
+        for (unsigned int j = 0; j < n; ++j)
+            printf("%f, ", C[row + j]);
+        printf("]\n");
     }
+    printf("\n\n");
+}
+
+void inicializar_matrices(double **A, double **B, double **C, int m, int p, int n) {
+    *A = (double*) malloc(m*p*sizeof(double));
+    *B = (double*) malloc(p*n*sizeof(double));
+    *C = (double*) malloc(m*n*sizeof(double));
+
+    srand(0); // Inicializa la semilla aleatoria
+    random_vector(*A,m*p);
+    random_vector(*B,p*n);
+    zero_vector(*C,m*n);
+}
+
+void liberar_matrices(double **A, double **B, double **C) {
+    free(*A); free(*B); free(*C);
 }
 
 int main(int argc, char** argv){
 
 	int algorithm, tam1, tam2, tam3;
-    double *A, *B; // TODO: Como inicializamos esta verga?
-    double *C; // TODO: Imagino que inicializar con 0
+    double *A, *B, *C;
 
     // Do stuff that may throw or fail
     
@@ -75,6 +94,7 @@ int main(int argc, char** argv){
     // m = tam1
     // k | p = tam2
     // n = tam3
+    inicializar_matrices(&A, &B, &C, tam1, tam2, tam3);
 
     // Execute algorithm
     switch(algorithm) {
@@ -96,7 +116,16 @@ int main(int argc, char** argv){
         default:
             break;
     }
+
+    liberar_matrices(&A, &B, &C);
     
 	return 0;
 }
 
+// Notas consulta: TODO: Condensar y borrar:
+
+//En la parte 2 del ejercicio 3 el parlaelismo grande está en la matriz B (cada fila de bloquecito en B se resuelve en paralelo). Pero la recorrida por los bloques de A son seriales
+
+//cublas recibe las matrices en orden Q major (ordenadas por columnas)
+//(Porque así viene en Fortran y sus fisicos y metodos numericos), entonces toda la blas está pensada por columnas. Para que el resultado sea el mismo hay que transponer (den la misma salida). El tiempo en teoria sería el mismo. En gral es imposible ganarle a cublas (?)
+//hay un parametro que te dice si está transpuesta o no (o si ya le transpusiste)
