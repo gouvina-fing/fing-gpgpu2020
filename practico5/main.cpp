@@ -2,21 +2,29 @@
 
 // Producto de matrices. Usando doble presición.
 // C = βC + αA × B
-// Si queremos restarle a C la multiplicación de Axb alpha se define como negativo
-
+// (Si queremos restarle a C la multiplicación de Axb alpha se define como negativo)
+// 
 // lda, ldb y ldc tienen la cantidad de elementos por fila (width) de cada matriz (lda ≥ k, ldb ≥ n y ldc ≥ n)
-// En gral A tiene tantas columnas como lda, B como ldb, etc.
-// El sentido de los mismos es si queremos trabajar con submatrices.
-// Ejemplo: A 1000x1000, B 1000x1000, C 100x100 C = A'*B' (Con A' y B' las sumatrices de 100x100 de arriba a la izq)
+//      En gral A tiene tantas columnas como lda, B como ldb, etc. El sentido de los mismos es si queremos trabajar con submatrices.
+//      Ejemplo: A 1000x1000, B 1000x1000, C 100x100 C = A'*B' (Con A' y B' las sumatrices de 100x100 de arriba a la izq)
 //          m = 100, n = 100, p = 100, lda = 1000, ldb = 1000, ldc = 100
 void dgemm_cpu(int m, int n, int p, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc);
 
 // NOTE: Para la experimentación se usará lda = k, ldb = n, ldc = n, C = 0, alpha = beta = 1.
-// Sin embargo para DTRSM importará una implementación genérica
+//       Sin embargo para DTRSM importará una implementación genérica
 void dgemm_gpu(int algorithm, int m, int n, int p, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc);
 
-// Resolución de un conjunto de sistemas de ecuaciones lineales triangulares (con un sitema ya "escalerizado"). Usando doble presición.
-void dtrsm_gpu(int algorithm, int m, int n, double *alpha, double *A, int lda, double *B, int ldb);
+// Resolución de ecuaciones matriciales. Usando doble presición
+// A × X = αB, donde α es un escalar, X y B ∈ R^{m×n}, y A ∈ R^{m×m} es una matriz triangular (inferior para esta implementación).
+// Esto equivale a resolver n sistemas de ecuaciones de forma Ax_i = b_i, donde b_i es una columna de B y x_i es la solución buscada
+// Al ser la matriz triangular el sistema de ecuaciones lineales ya viene "escalerizado".
+// 
+// A y B son arreglos unidimensionales de m × lda y n × ldb elementos respectivamente.
+// Para A el triángulo inferior del bloque superior izquierdo de tamaño m×m debe contener a A en su totalidad (El triangulo superior no es referenciado)
+//
+// La operación es in-place (los resultados se devuelven en la matriz B)
+// TODO: En CuBlas alpha es un double *
+void dtrsm_gpu(int algorithm, int m, int n, double alpha, double *A, int lda, double *B, int ldb);
 
 int print_trace_format() {
     printf("Invocar como: './labgpu20.x algoritmo [tam1] [tam2] [tam3]'\n");
@@ -31,6 +39,7 @@ int print_trace_format() {
     return 1;
 }
 
+// TODO: Algo de esto para matrices triangulares con determinante no nulo :'v
 void random_vector(double *A, int n) {
     for (unsigned int i = 0; i < n; ++i) A[i] = (double)rand() / (double)RAND_MAX;
 }
@@ -98,17 +107,24 @@ int main(int argc, char** argv){
 
     // Execute algorithm
     switch(algorithm) {
-        case 1:
-        case 2:
+        case 1: // DGEMM con memoria global
+        case 2: // DGEMM con memoria comaprtida
             dgemm_gpu(algorithm, tam1, tam3, tam2, 1.0, A, tam2, B, tam3, 1, C, tam3);
             break;
-        case 3:
+        case 3: // DTRSM A (32 x 32) B (32 x tam1)
+            dtrsm_gpu(algorithm, 32, tam1, 1.0, A, 32, B, 32);
             break;
-        case 4:
+        case 4: // DTRSM con bloques de k*32 recorriendo secuencialmente A (tam1 x tam1) B (tam1 x tam2)
+        case 5: // DTRSM versión recursiva A (tam1 x tam1) B (tam1 x tam2)
+            dtrsm_gpu(algorithm, tam1, tam2, 1.0, A, tam1, B, tam1);
             break;
-        case 5:
-            break;
-        case 6:
+        case 6: // DTRSM de la biblioteca CuBlas A (tam1 x tam1) B (tam1 x tam2)
+            // TODO: Invocar a CuBlas
+            // Notas consulta:
+                // CuBlas recibe las matrices en orden Q major (ordenadas por columnas) (Porque así viene en Fortran y sus fisicos y metodos numericos)
+                // Entonces toda la blas está pensada por columnas. Para que el resultado sea el mismo hay que transponer (den la misma salida). El tiempo en teoria sería el mismo.
+                // Hay un parametro que te dice si está transpuesta o no (o si ya le transpusiste)
+                // En general es imposible superar a CuBlas en tiempos (?)
             break;
         case 0:
             dgemm_cpu(tam1, tam3, tam2, 1.0, A, tam2, B, tam3, 1, C, tam3);
@@ -121,11 +137,3 @@ int main(int argc, char** argv){
     
 	return 0;
 }
-
-// Notas consulta: TODO: Condensar y borrar:
-
-//En la parte 2 del ejercicio 3 el parlaelismo grande está en la matriz B (cada fila de bloquecito en B se resuelve en paralelo). Pero la recorrida por los bloques de A son seriales
-
-//cublas recibe las matrices en orden Q major (ordenadas por columnas)
-//(Porque así viene en Fortran y sus fisicos y metodos numericos), entonces toda la blas está pensada por columnas. Para que el resultado sea el mismo hay que transponer (den la misma salida). El tiempo en teoria sería el mismo. En gral es imposible ganarle a cublas (?)
-//hay un parametro que te dice si está transpuesta o no (o si ya le transpusiste)

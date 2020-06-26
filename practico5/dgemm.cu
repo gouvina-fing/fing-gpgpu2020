@@ -9,7 +9,7 @@ using namespace std;
 
 #define TILE_WIDTH   32
 #define TILE_HEIGHT  32
-// TODO:
+// TODO: Definir estos para cargar la shared memory (Cambiarles el nombre?)
 #define BLOCK_WIDTH  TILE_WIDTH     // Width of shared memory block
 #define BLOCK_HEIGHT TILE_HEIGHT    // Height of shared memory block
 
@@ -25,14 +25,13 @@ using namespace std;
 
 // Link relevante: https://spatial-lang.org/gemm
 
-// Ej 1a) Kernel
+// Ej 1a)
 // Cada bloque calcula un tile de C, cada hilo un elemento de C.
 // No emplea memoria compartida ni otras optimizaciones.
 // Asumimos que los tamaños del tile siempre son multiplos del tamaño de bloque
 __global__ void dgemm_global_kernel() {}
 
-// Ej 1b) Kernel
-
+// Ej 1b)
 // Cada bloque calcula un tile de C, cada hilo un elemento de C.
 // Cada bloque va pasando tiles de A y B a memoria compartida, multiplicandolos, acumulando el resultado en un registro y luego cargando otros tiles de A y B.
 // Asumimos que los tamaños del tile siempre son multiplos del tamaño de bloque
@@ -52,7 +51,7 @@ void dgemm_gpu(int algorithm, int m, int n, int p, double alpha, double *A, int 
     // Reserva en GPU
     CUDA_CHK(cudaMalloc((void**)& device_A, size_a));
     CUDA_CHK(cudaMalloc((void**)& device_B, size_b));
-    CUDA_CHK(cudaMalloc((void**)& device_C, ssize_c));
+    CUDA_CHK(cudaMalloc((void**)& device_C, size_c));
 
     // Etapa 2: Transferencia de datos (Host -> Device)
     CUDA_CHK(cudaMemcpy(device_A, A, size_a, cudaMemcpyHostToDevice)); // puntero destino, puntero origen, numero de bytes a copiar, tipo de transferencia
@@ -60,7 +59,7 @@ void dgemm_gpu(int algorithm, int m, int n, int p, double alpha, double *A, int 
     CUDA_CHK(cudaMemcpy(device_C, C, size_c, cudaMemcpyHostToDevice));
 
     // Etapa 3: Definir grilla
-    // Se crea una grilla con las dimensiones de C (un hilo por pixel de C)
+    // Se crea una grilla con las dimensiones de C (un hilo por valor en C)
     int block_amount_x = m / TILE_WIDTH + (m % TILE_WIDTH != 0); // Division with ceiling
     int block_amount_y = n / TILE_HEIGHT + (n % TILE_HEIGHT != 0); // Division with ceiling
     dim3 tamGrid(block_amount_x, block_amount_y); // Grid dimension
