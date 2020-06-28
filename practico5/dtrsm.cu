@@ -75,8 +75,8 @@ void dtrsm_gpu(int algorithm, int m, int n, double alpha, double *A, int lda, do
 
     // Etapa 3: Definir grilla
     // TODO: Determinar dimensiones de las grillas
-    int block_amount_x = // m / TILE_WIDTH + (m % TILE_WIDTH != 0); // Division with ceiling
-    int block_amount_y = // n / TILE_HEIGHT + (n % TILE_HEIGHT != 0); // Division with ceiling
+    int block_amount_x = m / TILE_WIDTH + (m % TILE_WIDTH != 0); // Division with ceiling
+    int block_amount_y = n / TILE_HEIGHT + (n % TILE_HEIGHT != 0); // Division with ceiling
     dim3 tamGrid(block_amount_x, block_amount_y); // Grid dimension
     dim3 tamBlock(TILE_WIDTH, TILE_HEIGHT); // Block dimension
 

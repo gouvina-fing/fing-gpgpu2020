@@ -31,7 +31,7 @@ __global__ void transpose_shared_kernel_16(float* d_input, int width, int height
     unsigned int imgy = (blockIdx.y * blockDim.y) + threadIdx.y;
 
     // Lectura por fila (global) / Escritura por fila (compartida)
-    if (imgx < width && imgy < height ) {
+    if (imgx < width && imgy < height) {
         tile[threadIdx.y][threadIdx.x] = d_input[(imgy*width) + imgx];
         __syncthreads();
     }

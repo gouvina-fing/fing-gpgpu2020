@@ -126,12 +126,15 @@ int main(int argc, char** argv){
                 // Hay un parametro que te dice si está transpuesta o no (o si ya le transpusiste)
                 // En general es imposible superar a CuBlas en tiempos (?)
             break;
-        case 0:
+        case 0: // DGEMM CPU
+            // NOTE: No hacer un "Todos" porque todo acá sobreescribe en los datos de lectura
             dgemm_cpu(tam1, tam3, tam2, 1.0, A, tam2, B, tam3, 1, C, tam3);
             break;
         default:
             break;
     }
+
+    print_matrix_from_vector(C,tam1,tam3);
 
     liberar_matrices(&A, &B, &C);
     

@@ -9,9 +9,6 @@ using namespace std;
 
 #define TILE_WIDTH   32
 #define TILE_HEIGHT  32
-// TODO: Definir estos para cargar la shared memory (Cambiarles el nombre?)
-#define BLOCK_WIDTH  TILE_WIDTH     // Width of shared memory block
-#define BLOCK_HEIGHT TILE_HEIGHT    // Height of shared memory block
 
 // Producto de matrices. Usando doble presición.
 // C = βC + αA × B
@@ -29,13 +26,66 @@ using namespace std;
 // Cada bloque calcula un tile de C, cada hilo un elemento de C.
 // No emplea memoria compartida ni otras optimizaciones.
 // Asumimos que los tamaños del tile siempre son multiplos del tamaño de bloque
-__global__ void dgemm_global_kernel() {}
+__global__ void dgemm_global_kernel(int p, double alpha, double *d_A, int lda, double *d_B, int ldb, double beta, double *d_C, int ldc) {
+    int x, y, k, row_a, row_b, row_c;
+    double alpha_a, result;
+
+    x = (blockIdx.x * blockDim.x) + threadIdx.x; // Column
+    y = (blockIdx.y * blockDim.y) + threadIdx.y; // Row
+    row_a = y*lda;
+    row_c = y*ldc;
+    result = d_C[row_c + x]*beta;
+
+    for(k = 0; k < p; ++k) {
+        row_b = k*ldb;
+        alpha_a = alpha*d_A[row_a + k];
+
+        result += alpha_a*d_B[row_b + x];
+    }
+    d_C[row_c + x] = result;
+}
 
 // Ej 1b)
 // Cada bloque calcula un tile de C, cada hilo un elemento de C.
 // Cada bloque va pasando tiles de A y B a memoria compartida, multiplicandolos, acumulando el resultado en un registro y luego cargando otros tiles de A y B.
 // Asumimos que los tamaños del tile siempre son multiplos del tamaño de bloque
-__global__ void dgemm_shared_kernel() {}
+__global__ void dgemm_shared_kernel(int p, double alpha, double *d_A, int lda, double *d_B, int ldb, double beta, double *d_C, int ldc) {
+    __shared__ double tile_A[TILE_WIDTH][TILE_HEIGHT];
+    __shared__ double tile_B[TILE_WIDTH][TILE_HEIGHT];
+
+    int x, y, k, row_a, row_c, memory_index_x, memory_index_y, idx, idy;
+    double alpha_a, result;
+
+    x = (blockIdx.x * blockDim.x) + threadIdx.x; // Column
+    y = (blockIdx.y * blockDim.y) + threadIdx.y; // Row
+    row_a = y*lda;
+    row_c = y*ldc;
+    result = d_C[row_c + x]*beta;
+
+    memory_index_x = threadIdx.x;
+    memory_index_y = threadIdx.y;
+
+    // Iteramos por cada bloque en las filas de A y columnas de B
+    for(int step = 0; step < p; step+=32) {
+        idx = step + memory_index_x;
+        idy = step + memory_index_y;
+
+        // Los hilos guardan el bloque en memoria compartida
+        tile_A[idy][idx] = d_A[row_a + idx];
+        tile_B[idy][idx] = d_B[idy*ldb + x];
+        __syncthreads();
+
+        // Se opera acediendo a los bloques previamente guardados
+        for(k = 0; k < 32; ++k) {
+            alpha_a = alpha*tile_A[idy][k];
+            result += alpha_a*tile_B[k][idx];
+        }
+        // Se sincroniza para evitar que la memoria compartida sea editada mientras aún se usa para operar
+        __syncthreads();
+    }
+
+    d_C[row_c + x] = result;
+}
 
 void dgemm_gpu(int algorithm, int m, int n, int p, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc) {
     // Etapa 1: Reserva de Memoria
@@ -68,10 +118,10 @@ void dgemm_gpu(int algorithm, int m, int n, int p, double alpha, double *A, int 
     // Etapa 4 : Lanzar Kernel
     switch(algorithm) {
         case 1:
-            dgemm_global_kernel<<<tamGrid, tamBlock>>>(m, n, p, alpha, device_A, lda, device_B, ldb, beta, device_C, ldc);
+            dgemm_global_kernel<<<tamGrid, tamBlock>>>(p, alpha, device_A, lda, device_B, ldb, beta, device_C, ldc);
             break;
         case 2:
-            dgemm_shared_kernel<<<tamGrid, tamBlock>>>(m, n, p, alpha, device_A, lda, device_B, ldb, beta, device_C, ldc);
+            dgemm_shared_kernel<<<tamGrid, tamBlock>>>(p, alpha, device_A, lda, device_B, ldb, beta, device_C, ldc);
     }
     cudaDeviceSynchronize();
 
