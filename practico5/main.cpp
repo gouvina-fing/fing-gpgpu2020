@@ -125,6 +125,7 @@ int main(int argc, char** argv){
                 // Entonces toda la blas está pensada por columnas. Para que el resultado sea el mismo hay que transponer (den la misma salida). El tiempo en teoria sería el mismo.
                 // Hay un parametro que te dice si está transpuesta o no (o si ya le transpusiste)
                 // En general es imposible superar a CuBlas en tiempos (?)
+                // Transponer en CPU antes de llamar la cosa
             break;
         case 0: // DGEMM CPU
             // NOTE: No hacer un "Todos" porque todo acá sobreescribe en los datos de lectura

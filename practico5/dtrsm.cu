@@ -26,7 +26,9 @@ using namespace std;
 //      - Cada thread lee datos calculados por los threads del warp del índice anterior. Para compartir datos entre los hilos del warp tenemos las siguientes opciones:
 
 // Ej 2.1 a-1) Kernel para el caso 32 x n con los threads de un warp comunicandose a través memoria compartida
-__global__ void dtrsm_32_shared_kernel() {}
+__global__ void dtrsm_32_shared_kernel() {
+    // Guardar A en memoria compartida
+}
 
 // Ej 2.1 a-2) Kernel para el caso 32 x n con los threads de un warp comunicandose utilizando la primitiva __shfl_sync
 __global__ void dtrsm_32_shuffle_kernel() {}
@@ -49,6 +51,7 @@ __global__ void dtrsm_32k_kernel() {}
 //         El paso recursivo divide la matriz A en 4 submatrices (Y a B de forma coherente).
 // NOTE: Ver letra y Figura 6 para las operaciones con las submatrices
 //       Puede ser implementada en CPU (invocando los kernels correspondientes en cada caso, así es moar sencillo)
+// NOTE: No es obligatorio experimentar con muchos valores de K.
 void dtrsm_recursive() {}
 
 // A y B son arreglos unidimensionales de m × lda y n × ldb elementos.
