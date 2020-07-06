@@ -71,14 +71,14 @@ __global__ void dgemm_shared_kernel(int p, const double alpha, double *d_A, int 
         idy = step + memory_index_y;
 
         // Los hilos guardan el bloque en memoria compartida
-        tile_A[idy][idx] = d_A[row_a + idx];
-        tile_B[idy][idx] = d_B[idy*ldb + x];
+        tile_A[memory_index_y][memory_index_x] = d_A[row_a + idx];
+        tile_B[memory_index_y][memory_index_x] = d_B[idy*ldb + x];
         __syncthreads();
 
         // Se opera acediendo a los bloques previamente guardados
         for(k = 0; k < 32; ++k) {
-            alpha_a = alpha*tile_A[idy][k];
-            result += alpha_a*tile_B[k][idx];
+            alpha_a = alpha*tile_A[memory_index_y][k];
+            result += alpha_a*tile_B[k][memory_index_x];
         }
         // Se sincroniza para evitar que la memoria compartida sea editada mientras aún se usa para operar
         __syncthreads();
