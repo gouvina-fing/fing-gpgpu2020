@@ -26,7 +26,7 @@ using namespace std;
 // Cada bloque calcula un tile de C, cada hilo un elemento de C.
 // No emplea memoria compartida ni otras optimizaciones.
 // Asumimos que los tamaños del tile siempre son multiplos del tamaño de bloque
-__global__ void dgemm_global_kernel(int p, double alpha, double *d_A, int lda, double *d_B, int ldb, double beta, double *d_C, int ldc) {
+__global__ void dgemm_global_kernel(int p, const double alpha, double *d_A, int lda, double *d_B, int ldb, double beta, double *d_C, int ldc) {
     int x, y, k, row_a, row_b, row_c;
     double alpha_a, result;
 
@@ -49,7 +49,7 @@ __global__ void dgemm_global_kernel(int p, double alpha, double *d_A, int lda, d
 // Cada bloque calcula un tile de C, cada hilo un elemento de C.
 // Cada bloque va pasando tiles de A y B a memoria compartida, multiplicandolos, acumulando el resultado en un registro y luego cargando otros tiles de A y B.
 // Asumimos que los tamaños del tile siempre son multiplos del tamaño de bloque
-__global__ void dgemm_shared_kernel(int p, double alpha, double *d_A, int lda, double *d_B, int ldb, double beta, double *d_C, int ldc) {
+__global__ void dgemm_shared_kernel(int p, const double alpha, double *d_A, int lda, double *d_B, int ldb, double beta, double *d_C, int ldc) {
     __shared__ double tile_A[TILE_WIDTH][TILE_HEIGHT];
     __shared__ double tile_B[TILE_WIDTH][TILE_HEIGHT];
 
@@ -87,7 +87,7 @@ __global__ void dgemm_shared_kernel(int p, double alpha, double *d_A, int lda, d
     d_C[row_c + x] = result;
 }
 
-void dgemm_gpu(int algorithm, int m, int n, int p, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc) {
+void dgemm_gpu(int algorithm, int m, int n, int p, const double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc) {
     // Etapa 1: Reserva de Memoria
     unsigned int size_a = m*p*sizeof(double);
     unsigned int size_b = p*n*sizeof(double);
@@ -134,7 +134,7 @@ void dgemm_gpu(int algorithm, int m, int n, int p, double alpha, double *A, int 
     CUDA_CHK(cudaFree(device_C));
 }
 
-void dgemm_cpu(int m, int n, int p, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc) {
+void dgemm_cpu(int m, int n, int p, const double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc) {
     int i, j, k, row_a, row_b, row_c;
     double alpha_a;
 

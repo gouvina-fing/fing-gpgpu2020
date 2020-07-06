@@ -23,8 +23,9 @@ void dgemm_gpu(int algorithm, int m, int n, int p, double alpha, double *A, int 
 // Para A el triángulo inferior del bloque superior izquierdo de tamaño m×m debe contener a A en su totalidad (El triangulo superior no es referenciado)
 //
 // La operación es in-place (los resultados se devuelven en la matriz B)
-// TODO: En CuBlas alpha es un double *
 void dtrsm_gpu(int algorithm, int m, int n, double alpha, double *A, int lda, double *B, int ldb);
+
+void dtrsm_cublas(int m, int n, const double *alpha, double *A, int lda, double *B, int ldb);
 
 int print_trace_format() {
     printf("Invocar como: './labgpu20.x algoritmo [tam1] [tam2] [tam3]'\n");
@@ -76,10 +77,20 @@ void liberar_matrices(double **A, double **B, double **C) {
     free(*A); free(*B); free(*C);
 }
 
+void transponer_vector(double *A, double *transposeA, int m, int n) {
+    int row;
+    for (unsigned int i = 0; i < m; ++i) {
+        row = i*n;
+        for (unsigned int j = 0; j < n; ++j)
+            transposeA[j*m + i] = A[row + j];
+    }
+}
+
 int main(int argc, char** argv){
 
 	int algorithm, tam1, tam2, tam3;
-    double *A, *B, *C;
+    double *A, *B, *C, *transposeA, *transposeB;
+    const double alpha = 1.0;
 
     // Do stuff that may throw or fail
     
@@ -106,19 +117,57 @@ int main(int argc, char** argv){
     inicializar_matrices(&A, &B, &C, tam1, tam2, tam3);
 
     // Execute algorithm
+    double testA[3*3] = { 1.0, 0, 0, 2.0, 3.0, 0, 4.0, 5.0, 6.0 };
+    double testB[4*3] = { 1, 10, 50, 100, 8, 80, 400, 800, 32, 320, 1600, 3200 };
     switch(algorithm) {
         case 1: // DGEMM con memoria global
         case 2: // DGEMM con memoria comaprtida
-            dgemm_gpu(algorithm, tam1, tam3, tam2, 1.0, A, tam2, B, tam3, 1, C, tam3);
+            dgemm_gpu(algorithm, tam1, tam3, tam2, alpha, A, tam2, B, tam3, 1, C, tam3);
             break;
         case 3: // DTRSM A (32 x 32) B (32 x tam1)
-            dtrsm_gpu(algorithm, 32, tam1, 1.0, A, 32, B, 32);
+            dtrsm_gpu(algorithm, 32, tam1, alpha, A, 32, B, 32);
             break;
         case 4: // DTRSM con bloques de k*32 recorriendo secuencialmente A (tam1 x tam1) B (tam1 x tam2)
         case 5: // DTRSM versión recursiva A (tam1 x tam1) B (tam1 x tam2)
-            dtrsm_gpu(algorithm, tam1, tam2, 1.0, A, tam1, B, tam1);
+            dtrsm_gpu(algorithm, tam1, tam2, alpha, A, tam1, B, tam1);
             break;
         case 6: // DTRSM de la biblioteca CuBlas A (tam1 x tam1) B (tam1 x tam2)
+            // dtrsm_cublas(tam1, tam2, &alpha, A, tam1, B, tam1);
+
+            tam1 = 3;
+            tam2 = 4;
+
+            transposeA = (double*) malloc(tam1*tam1*sizeof(double));
+            transposeB = (double*) malloc(tam2*tam2*sizeof(double));
+
+            printf("A:\n");
+            print_matrix_from_vector(testA,tam1,tam1);
+            //double testA[3*3] = { 1.0, 2.0, 4.0, 0, 3.0, 5.0, 0, 0, 6.0 };
+
+            transponer_vector(testA, transposeA, tam1,tam1);
+            printf("A Transpose:\n");
+            print_matrix_from_vector(transposeA,tam1,tam1);
+
+            printf("\n");
+
+            printf("b:\n");
+            print_matrix_from_vector(testB,tam1,tam2);
+            //double testB[4*3] = { 1, 8, 32, 10, 80, 320, 50, 400, 1600, 100, 800, 3200 };
+
+            printf("\n");
+
+            printf("Result:\n");
+
+            transponer_vector(testB, transposeB, tam1,tam2);
+            printf("B Transpose:\n");
+            print_matrix_from_vector(transposeB,tam2,tam1);
+
+            dtrsm_cublas(tam1, tam2, &alpha, transposeA, tam1, transposeB, tam1);
+
+            transponer_vector(transposeB, testB, tam2, tam1);
+
+            print_matrix_from_vector(testB,tam1,tam2);
+
             // TODO: Invocar a CuBlas
             // Notas consulta:
                 // CuBlas recibe las matrices en orden Q major (ordenadas por columnas) (Porque así viene en Fortran y sus fisicos y metodos numericos)
@@ -129,13 +178,14 @@ int main(int argc, char** argv){
             break;
         case 0: // DGEMM CPU
             // NOTE: No hacer un "Todos" porque todo acá sobreescribe en los datos de lectura
-            dgemm_cpu(tam1, tam3, tam2, 1.0, A, tam2, B, tam3, 1, C, tam3);
+            dgemm_cpu(tam1, tam3, tam2, alpha, A, tam2, B, tam3, 1, C, tam3);
             break;
         default:
             break;
     }
 
-    print_matrix_from_vector(C,tam1,tam3);
+    
+    
 
     liberar_matrices(&A, &B, &C);
     

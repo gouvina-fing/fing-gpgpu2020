@@ -1,8 +1,8 @@
 #include "util.h"
-
 #include "cuda.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include "cublas_v2.h"
 #include <algorithm>    // std::min std::max
 
 using namespace std;
@@ -59,7 +59,7 @@ void dtrsm_recursive() {}
 //
 // La operación es in-place (los resultados se devuelven en la matriz B)
 // TODO: En CuBlas alpha es un double *
-void dtrsm_gpu(int algorithm, int m, int n, double alpha, double *A, int lda, double *B, int ldb) {
+void dtrsm_gpu(int algorithm, int m, int n, const double alpha, double *A, int lda, double *B, int ldb) {
     // Etapa 1: Reserva de Memoria
     unsigned int size_a = m*m*sizeof(double);
     unsigned int size_b = m*n*sizeof(double);
@@ -103,4 +103,71 @@ void dtrsm_gpu(int algorithm, int m, int n, double alpha, double *A, int lda, do
     // Etapa 6: Liberación de Memoria
     CUDA_CHK(cudaFree(device_A));
     CUDA_CHK(cudaFree(device_B));
+}
+
+void dtrsm_cublas(int m, int n, const double *alpha, double *A, int lda, double *B, int ldb) {
+    cudaError_t cudaStatus = cudaSuccess;
+    cublasStatus_t status = CUBLAS_STATUS_SUCCESS;
+    cublasHandle_t handle;
+
+    // Etapa 1: Reserva de Memoria
+    unsigned int size_a = m*m*sizeof(double);
+    unsigned int size_b = m*n*sizeof(double);
+
+    // Reserva en CPU
+    double * device_A = (double *)malloc(size_a);
+    double * device_B = (double *)malloc(size_b);
+
+    // Reserva en GPU
+    CUDA_CHK(cudaMalloc((void**)& device_A, size_a));
+    CUDA_CHK(cudaMalloc((void**)& device_B, size_b));
+
+    // Etapa 2: Crear Handle de CuBlas
+    status = cublasCreate(&handle);
+    if (status != CUBLAS_STATUS_SUCCESS) {
+        printf ("CUBLAS initialization failed\n");
+        return;
+    }
+
+    // Etapa 3: Transferencia de datos (Host -> Device)
+    status = cublasSetMatrix(m, m, sizeof(double), A, lda, device_A, lda);
+    if (status != CUBLAS_STATUS_SUCCESS) {
+        printf ("data download A failed\n");
+        CUDA_CHK(cudaFree(device_A));
+        cublasDestroy(handle);
+        return;
+    }
+    status = cublasSetMatrix (m, n, sizeof(double), B, ldb, device_B, ldb);
+    if (status != CUBLAS_STATUS_SUCCESS) {
+        printf ("data download B failed\n");
+        CUDA_CHK(cudaFree(device_A));
+        CUDA_CHK(cudaFree(device_B));
+        cublasDestroy(handle);
+        return;
+    }
+
+    // Etapa 4 : Lanzar Kernel
+    status = cublasDtrsm(
+        handle, CUBLAS_SIDE_LEFT, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_N, CUBLAS_DIAG_NON_UNIT,
+        m, n, alpha, device_A, lda, device_B, ldb
+    );
+    if (status != CUBLAS_STATUS_SUCCESS) {
+        printf ("DTRSM operation failed\n");
+        CUDA_CHK(cudaFree(device_A));
+        CUDA_CHK(cudaFree(device_B));
+        cublasDestroy(handle);
+        return;
+    }
+
+    // Etapa 5: Transferencia de Datos (Device -> Host)
+    status = cublasGetMatrix (m, n, sizeof(double), device_B, ldb, B, ldb);
+    if (status != CUBLAS_STATUS_SUCCESS) {
+        printf ("data upload failed\n");
+        cublasDestroy(handle);
+    }
+
+    // Etapa 6: Liberación de Memoria
+    CUDA_CHK(cudaFree(device_A));
+    CUDA_CHK(cudaFree(device_B));
+    //return EXIT_SUCCESS;
 }
