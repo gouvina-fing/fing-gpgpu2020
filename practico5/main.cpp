@@ -62,7 +62,7 @@ void print_matrix_from_vector(double * C, int m, int n) {
     printf("\n\n");
 }
 
-void inicializar_matrices(double **A, double **B, double **C, int m, int p, int n) {
+void inicializar_matrices_DGEMM(double **A, double **B, double **C, int m, int p, int n) {
     *A = (double*) malloc(m*p*sizeof(double));
     *B = (double*) malloc(p*n*sizeof(double));
     *C = (double*) malloc(m*n*sizeof(double));
@@ -73,23 +73,28 @@ void inicializar_matrices(double **A, double **B, double **C, int m, int p, int 
     zero_vector(*C,m*n);
 }
 
-void liberar_matrices(double **A, double **B, double **C) {
-    free(*A); free(*B); free(*C);
+void inicializar_matrices_DTRSM(double **A, double **B, int m, int n) {
+    *A = (double*) malloc(m*m*sizeof(double));
+    *B = (double*) malloc(m*n*sizeof(double));
+
+    srand(0); // Inicializa la semilla aleatoria
+    random_vector(*A,m*m);
+    random_vector(*B,n*m);
 }
 
-void transponer_vector(double *A, double *transposeA, int m, int n) {
+void transponer_vector(double *A, int m, int n, double *transposedA) {
     int row;
     for (unsigned int i = 0; i < m; ++i) {
         row = i*n;
         for (unsigned int j = 0; j < n; ++j)
-            transposeA[j*m + i] = A[row + j];
+            transposedA[j*m + i] = A[row + j];
     }
 }
 
 int main(int argc, char** argv){
 
 	int algorithm, tam1, tam2, tam3;
-    double *A, *B, *C, *transposeA, *transposeB;
+    double *A, *B, *C, *transposedA, *transposedB;
     const double alpha = 1.0;
 
     // Do stuff that may throw or fail
@@ -110,15 +115,29 @@ int main(int argc, char** argv){
         }
     }
 
-    // DGEMM (Algorithm 1 | 2):
-    // m = tam1
-    // k | p = tam2
-    // n = tam3
-    inicializar_matrices(&A, &B, &C, tam1, tam2, tam3);
+    switch(algorithm) {
+        case 0:
+        case 1:
+        case 2:
+            // m = tam1
+            // k | p = tam2
+            // n = tam3
+            inicializar_matrices_DGEMM(&A, &B, &C, tam1, tam2, tam3);
+            break;
+        case 3:
+            // m = tam1
+            // n = 32
+            inicializar_matrices_DTRSM(&A, &B, tam1, 32);
+            break;
+        case 4:
+        case 5:
+        case 6:
+            // m = tam1
+            // n = tam2
+            inicializar_matrices_DTRSM(&A, &B, tam1, tam2);
+    }
 
     // Execute algorithm
-    double testA[3*3] = { 1.0, 0, 0, 2.0, 3.0, 0, 4.0, 5.0, 6.0 };
-    double testB[4*3] = { 1, 10, 50, 100, 8, 80, 400, 800, 32, 320, 1600, 3200 };
     switch(algorithm) {
         case 1: // DGEMM con memoria global
         case 2: // DGEMM con memoria comaprtida
@@ -132,49 +151,16 @@ int main(int argc, char** argv){
             dtrsm_gpu(algorithm, tam1, tam2, alpha, A, tam1, B, tam1);
             break;
         case 6: // DTRSM de la biblioteca CuBlas A (tam1 x tam1) B (tam1 x tam2)
-            // dtrsm_cublas(tam1, tam2, &alpha, A, tam1, B, tam1);
+            transposedA = (double*) malloc(tam1*tam1*sizeof(double));
+            transposedB = (double*) malloc(tam2*tam1*sizeof(double));
 
-            tam1 = 3;
-            tam2 = 4;
+            transponer_vector(A, tam1, tam1, transposedA);
+            transponer_vector(B, tam1, tam2, transposedB);
 
-            transposeA = (double*) malloc(tam1*tam1*sizeof(double));
-            transposeB = (double*) malloc(tam2*tam2*sizeof(double));
+            dtrsm_cublas(tam1, tam2, &alpha, transposedA, tam1, transposedB, tam1);
 
-            printf("A:\n");
-            print_matrix_from_vector(testA,tam1,tam1);
-            //double testA[3*3] = { 1.0, 2.0, 4.0, 0, 3.0, 5.0, 0, 0, 6.0 };
-
-            transponer_vector(testA, transposeA, tam1,tam1);
-            printf("A Transpose:\n");
-            print_matrix_from_vector(transposeA,tam1,tam1);
-
-            printf("\n");
-
-            printf("b:\n");
-            print_matrix_from_vector(testB,tam1,tam2);
-            //double testB[4*3] = { 1, 8, 32, 10, 80, 320, 50, 400, 1600, 100, 800, 3200 };
-
-            printf("\n");
-
-            printf("Result:\n");
-
-            transponer_vector(testB, transposeB, tam1,tam2);
-            printf("B Transpose:\n");
-            print_matrix_from_vector(transposeB,tam2,tam1);
-
-            dtrsm_cublas(tam1, tam2, &alpha, transposeA, tam1, transposeB, tam1);
-
-            transponer_vector(transposeB, testB, tam2, tam1);
-
-            print_matrix_from_vector(testB,tam1,tam2);
-
-            // TODO: Invocar a CuBlas
-            // Notas consulta:
-                // CuBlas recibe las matrices en orden Q major (ordenadas por columnas) (Porque así viene en Fortran y sus fisicos y metodos numericos)
-                // Entonces toda la blas está pensada por columnas. Para que el resultado sea el mismo hay que transponer (den la misma salida). El tiempo en teoria sería el mismo.
-                // Hay un parametro que te dice si está transpuesta o no (o si ya le transpusiste)
-                // En general es imposible superar a CuBlas en tiempos (?)
-                // Transponer en CPU antes de llamar la cosa
+            transponer_vector(transposedB, tam2, tam1, B);
+            
             break;
         case 0: // DGEMM CPU
             // NOTE: No hacer un "Todos" porque todo acá sobreescribe en los datos de lectura
@@ -184,10 +170,20 @@ int main(int argc, char** argv){
             break;
     }
 
-    
-    
-
-    liberar_matrices(&A, &B, &C);
+    switch(algorithm) {
+        case 0:
+        case 1:
+        case 2:
+            print_matrix_from_vector(C, tam1, tam3);
+            free(A); free(B); free(C);
+            break;
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+            print_matrix_from_vector(B, tam1, tam2);
+            free(A); free(B); free(transposedA); free(transposedB);
+    }
     
 	return 0;
 }

@@ -106,7 +106,6 @@ void dtrsm_gpu(int algorithm, int m, int n, const double alpha, double *A, int l
 }
 
 void dtrsm_cublas(int m, int n, const double *alpha, double *A, int lda, double *B, int ldb) {
-    cudaError_t cudaStatus = cudaSuccess;
     cublasStatus_t status = CUBLAS_STATUS_SUCCESS;
     cublasHandle_t handle;
 
