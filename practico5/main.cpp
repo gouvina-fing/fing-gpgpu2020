@@ -40,7 +40,6 @@ int print_trace_format() {
     return 1;
 }
 
-// TODO: Algo de esto para matrices triangulares con determinante no nulo :'v
 void random_vector(double *A, int n) {
     for (unsigned int i = 0; i < n; ++i) A[i] = (double)rand() / (double)RAND_MAX;
 }
@@ -78,7 +77,7 @@ void inicializar_matrices_DTRSM(double **A, double **B, int m, int n) {
     *B = (double*) malloc(m*n*sizeof(double));
 
     srand(0); // Inicializa la semilla aleatoria
-    random_vector(*A,m*m);
+    random_vector(*A,m*m); // TODO: Llenar A con un random que no ponga 0s en la diagonal
     random_vector(*B,n*m);
 }
 
@@ -119,26 +118,25 @@ int main(int argc, char** argv){
         case 0:
         case 1:
         case 2:
-            // m = tam1
-            // k | p = tam2
-            // n = tam3
+            // m = tam1; k | p = tam2; n = tam3
             inicializar_matrices_DGEMM(&A, &B, &C, tam1, tam2, tam3);
             break;
         case 3:
-            // m = tam1
-            // n = 32
+            // m = tam1; n = 32
             inicializar_matrices_DTRSM(&A, &B, tam1, 32);
             break;
         case 4:
         case 5:
         case 6:
-            // m = tam1
-            // n = tam2
+            // m = tam1; n = tam2
             inicializar_matrices_DTRSM(&A, &B, tam1, tam2);
     }
 
     // Execute algorithm
     switch(algorithm) {
+        case 0: // DGEMM CPU
+            dgemm_cpu(tam1, tam3, tam2, alpha, A, tam2, B, tam3, 1, C, tam3);
+            break;
         case 1: // DGEMM con memoria global
         case 2: // DGEMM con memoria comaprtida
             dgemm_gpu(algorithm, tam1, tam3, tam2, alpha, A, tam2, B, tam3, 1, C, tam3);
@@ -160,11 +158,6 @@ int main(int argc, char** argv){
             dtrsm_cublas(tam1, tam2, &alpha, transposedA, tam1, transposedB, tam1);
 
             transponer_vector(transposedB, tam2, tam1, B);
-            
-            break;
-        case 0: // DGEMM CPU
-            // NOTE: No hacer un "Todos" porque todo acá sobreescribe en los datos de lectura
-            dgemm_cpu(tam1, tam3, tam2, alpha, A, tam2, B, tam3, 1, C, tam3);
             break;
         default:
             break;
