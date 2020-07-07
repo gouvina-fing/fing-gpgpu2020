@@ -37,9 +37,9 @@ __global__ void dgemm_global_kernel(int p, const double alpha, double *d_A, int 
     result = d_C[row_c + x]*beta;
 
     for(k = 0; k < p; ++k) {
-        row_b = k*ldb;
         alpha_a = alpha*d_A[row_a + k];
 
+        row_b = k*ldb;
         result += alpha_a*d_B[row_b + x];
     }
     d_C[row_c + x] = result;
@@ -89,9 +89,9 @@ __global__ void dgemm_shared_kernel(int p, const double alpha, double *d_A, int 
 
 void dgemm_gpu(int algorithm, int m, int n, int p, const double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc) {
     // Etapa 1: Reserva de Memoria
-    unsigned int size_a = m*p*sizeof(double);
-    unsigned int size_b = p*n*sizeof(double);
-    unsigned int size_c = m*n*sizeof(double);
+    unsigned int size_a = m*lda*sizeof(double);
+    unsigned int size_b = p*ldb*sizeof(double);
+    unsigned int size_c = m*ldc*sizeof(double);
 
     // Reserva en CPU
     double * device_A = (double *)malloc(size_a);
@@ -112,6 +112,7 @@ void dgemm_gpu(int algorithm, int m, int n, int p, const double alpha, double *A
     // Se crea una grilla con las dimensiones de C (un hilo por valor en C)
     int block_amount_x = m / TILE_WIDTH + (m % TILE_WIDTH != 0); // Division with ceiling
     int block_amount_y = n / TILE_HEIGHT + (n % TILE_HEIGHT != 0); // Division with ceiling
+
     dim3 tamGrid(block_amount_x, block_amount_y); // Grid dimension
     dim3 tamBlock(TILE_WIDTH, TILE_HEIGHT); // Block dimension
 
