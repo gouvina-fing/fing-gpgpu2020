@@ -21,12 +21,12 @@ nvidia-smi
 
 # Timing
 
-make
+make cluster
 
-nvprof --print-gpu-trace ./ej1.x $1 $2 $3 $4 --benchmark -numdevices=1 # algoritmo, tam1, tam2, tam3
+nvprof --print-gpu-trace ./labgpu20.x $1 $2 $3 $4 --benchmark -numdevices=1 # algoritmo, tam1, tam2, tam3
 
 # Memory and Shared Efficiency
 
-# make ej1_no_l1
+# make cluster_no_l1
 
-# nvprof --profile-api-trace none --metrics "gld_efficiency,gst_efficiency,shared_efficiency" ./ej1_no_l1.x $1 $2 $3 $4 # algoritmo, tam1, tam2, tam3
+# nvprof --profile-api-trace none --metrics "gld_efficiency,gst_efficiency,shared_efficiency,achieved_occupancy" ./labgpu20_no_l1.x $1 $2 $3 $4 # algoritmo, tam1, tam2, tam3

@@ -1,0 +1,63 @@
+Architecture:          x86_64
+CPU op-mode(s):        32-bit, 64-bit
+Byte Order:            Little Endian
+CPU(s):                40
+On-line CPU(s) list:   0-39
+Thread(s) per core:    1
+Core(s) per socket:    20
+Socket(s):             2
+NUMA node(s):          2
+Vendor ID:             GenuineIntel
+CPU family:            6
+Model:                 85
+Model name:            Intel(R) Xeon(R) Gold 6138 CPU @ 2.00GHz
+Stepping:              4
+CPU MHz:               2699.951
+CPU max MHz:           3700,0000
+CPU min MHz:           1000,0000
+BogoMIPS:              4000.00
+Virtualization:        VT-x
+L1d cache:             32K
+L1i cache:             32K
+L2 cache:              1024K
+L3 cache:              28160K
+NUMA node0 CPU(s):     0-19
+NUMA node1 CPU(s):     20-39
+Flags:                 fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc aperfmperf eagerfpu pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch epb cat_l3 cdp_l3 intel_ppin intel_pt ssbd mba ibrs ibpb stibp tpr_shadow vnmi flexpriority ept vpid fsgsbase tsc_adjust bmi1 hle avx2 smep bmi2 erms invpcid rtm cqm mpx rdt_a avx512f avx512dq rdseed adx smap clflushopt clwb avx512cd avx512bw avx512vl xsaveopt xsavec xgetbv1 cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local dtherm ida arat pln pts hwp hwp_act_window hwp_pkg_req pku ospke spec_ctrl intel_stibp flush_l1d
+Thu Jul  9 14:30:11 2020       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 396.44                 Driver Version: 396.44                    |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|===============================+======================+======================|
+|   0  Tesla P100-PCIE...  Off  | 00000000:37:00.0 Off |                    0 |
+| N/A   49C    P0    29W / 250W |      0MiB / 12198MiB |      0%      Default |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                       GPU Memory |
+|  GPU       PID   Type   Process name                             Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
+nvcc main.cpp dgemm.cu dtrsm.cu -o labgpu20.x -O3 -L/usr/X11R6/lib -lm -lpthread -lX11 -lcublas -arch=sm_60
+dtrsm.cu(33): warning: variable "a" was declared but never referenced
+
+dtrsm.cu(33): warning: variable "a" was declared but never referenced
+
+==2450== NVPROF is profiling process 2450, command: ./labgpu20.x 2 4096 4096 4096 --benchmark -numdevices=1
+==2450== Profiling application: ./labgpu20.x 2 4096 4096 4096 --benchmark -numdevices=1
+==2450== Profiling result:
+   Start  Duration            Grid Size      Block Size     Regs*    SSMem*    DSMem*      Size  Throughput  SrcMemType  DstMemType           Device   Context    Stream  Name
+580.01ms  32.288ms                    -               -         -         -         -  128.00MB  3.8714GB/s    Pageable      Device  Tesla P100-PCIE         1         7  [CUDA memcpy HtoD]
+612.55ms  30.308ms                    -               -         -         -         -  128.00MB  4.1243GB/s    Pageable      Device  Tesla P100-PCIE         1         7  [CUDA memcpy HtoD]
+643.09ms  30.355ms                    -               -         -         -         -  128.00MB  4.1179GB/s    Pageable      Device  Tesla P100-PCIE         1         7  [CUDA memcpy HtoD]
+673.47ms  125.91ms          (128 128 1)       (32 32 1)        32  16.000KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  dgemm_shared_kernel(int, double, double*, int, double*, int, double, double*, int) [118]
+799.42ms  31.456ms                    -               -         -         -         -  128.00MB  3.9738GB/s      Device    Pageable  Tesla P100-PCIE         1         7  [CUDA memcpy DtoH]
+
+Regs: Number of registers used per CUDA thread. This number includes registers used internally by the CUDA driver and/or tools and can be more than what the compiler shows.
+SSMem: Static shared memory allocated per CUDA block.
+DSMem: Dynamic shared memory allocated per CUDA block.
+SrcMemType: The type of source memory accessed by memory operation/copy
+DstMemType: The type of destination memory accessed by memory operation/copy

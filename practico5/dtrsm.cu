@@ -26,8 +26,39 @@ using namespace std;
 //      - Cada thread lee datos calculados por los threads del warp del índice anterior. Para compartir datos entre los hilos del warp tenemos las siguientes opciones:
 
 // Ej 2.1 a-1) Kernel para el caso 32 x n con los threads de un warp comunicandose a través memoria compartida
-__global__ void dtrsm_32_shared_kernel() {
-    // Guardar A en memoria compartida
+__global__ void dtrsm_32_shared_kernel(const double alpha, double *d_A, int lda, double *d_B, int ldb) {
+    __shared__ double shared_A[TILE_WIDTH][TILE_HEIGHT];
+    __shared__ double tile_B[TILE_WIDTH][TILE_HEIGHT];
+
+    int a, x, y, row_a, row_b, memory_index_x, memory_index_y;
+
+    x = (blockIdx.x * blockDim.x) + threadIdx.x; // Column
+    y = (blockIdx.y * blockDim.y) + threadIdx.y; // Row
+    row_a = y*lda;
+    row_b = y*ldb;
+
+    memory_index_x = threadIdx.x;
+    memory_index_y = threadIdx.y;
+
+    // Se guarda A en memoria compartida
+    shared_A[memory_index_y][memory_index_x] = d_A[row_a + x];
+    
+    __syncthreads();
+
+    // El paralelismo a nivel de warps es implicito, porque dentro de un warp se avanza en el código secuencialmente
+
+    // Los hilos de la fila 0 resuelven su incógnita, el resto adelanta la solución parcial de la misma.
+    tile_B[memory_index_y][memory_index_x] = alpha*d_B[row_b + x]/shared_A[memory_index_y][memory_index_y];
+
+    __syncthreads();
+
+    // Se itera por cada incógnita ya resuelta, usando su valor para resolver la siguiente y el resto parcialmente
+    for(int k = 0; k < memory_index_y; ++k) {
+        tile_B[memory_index_y][memory_index_x] -= (shared_A[memory_index_y][k]*tile_B[k][memory_index_x]/shared_A[memory_index_y][memory_index_y]);
+        __syncthreads();
+    }
+
+    d_B[row_b + x] = tile_B[memory_index_y][memory_index_x];
 }
 
 // Ej 2.1 a-2) Kernel para el caso 32 x n con los threads de un warp comunicandose utilizando la primitiva __shfl_sync
@@ -43,6 +74,7 @@ __global__ void dtrsm_32_shuffle_kernel() {}
 //          Si el tile no es diagonal la operación a realizar es la actualización del tile B_{i} mediante una operación DGEMM con tiles de 32x32
 //              NOTE: Ver Figura 5. Observar que una operación muy similar es realizada como parte del procedimiento por tiles de la operación DGEMM de la parte anterior.
 // NOTE: El parlaelismo grande está en la matriz B (cada fila de bloquecito en B se resuelve en paralelo). Pero las recorridas por los bloques de A son seriales
+// Hay que recorrer secuencial en A porque es el orden que te impone la operación
 __global__ void dtrsm_32k_kernel() {}
 
 
@@ -61,8 +93,8 @@ void dtrsm_recursive() {}
 // TODO: En CuBlas alpha es un double *
 void dtrsm_gpu(int algorithm, int m, int n, const double alpha, double *A, int lda, double *B, int ldb) {
     // Etapa 1: Reserva de Memoria
-    unsigned int size_a = m*m*sizeof(double);
-    unsigned int size_b = m*n*sizeof(double);
+    unsigned int size_a = m*lda*sizeof(double);
+    unsigned int size_b = ldb*n*sizeof(double);
 
     // Reserva en CPU
     double * device_A = (double *)malloc(size_a);
@@ -77,7 +109,7 @@ void dtrsm_gpu(int algorithm, int m, int n, const double alpha, double *A, int l
     CUDA_CHK(cudaMemcpy(device_B, B, size_b, cudaMemcpyHostToDevice));
 
     // Etapa 3: Definir grilla
-    // TODO: Determinar dimensiones de las grillas
+    // Se crea una grilla con las dimensiones de B
     int block_amount_x = m / TILE_WIDTH + (m % TILE_WIDTH != 0); // Division with ceiling
     int block_amount_y = n / TILE_HEIGHT + (n % TILE_HEIGHT != 0); // Division with ceiling
     dim3 tamGrid(block_amount_x, block_amount_y); // Grid dimension
@@ -86,14 +118,16 @@ void dtrsm_gpu(int algorithm, int m, int n, const double alpha, double *A, int l
     // Etapa 4 : Lanzar Kernel
     switch(algorithm) {
         case 3: // Versión 32 x n
-            dtrsm_32_shared_kernel<<<tamGrid, tamBlock>>>();
-            // TODO: cambiar por la más eficiente (shared o shuffle) 
+            dtrsm_32_shared_kernel<<<tamGrid, tamBlock>>>(alpha, device_A, lda, device_B, ldb);
             break;
         case 4: // Versión 32k x n
             dtrsm_32k_kernel<<<tamGrid, tamBlock>>>();
             break;
         case 5: // Versión recursiva.
             dtrsm_recursive();
+            break;
+        case 7: // Versión 32 x n Shuffle/Shared (la menos eficiente)
+            dtrsm_32_shared_kernel<<<tamGrid, tamBlock>>>(alpha, device_A, lda, device_B, ldb);
     }
     cudaDeviceSynchronize();
 
@@ -110,8 +144,8 @@ void dtrsm_cublas(int m, int n, const double *alpha, double *A, int lda, double 
     cublasHandle_t handle;
 
     // Etapa 1: Reserva de Memoria
-    unsigned int size_a = m*m*sizeof(double);
-    unsigned int size_b = m*n*sizeof(double);
+    unsigned int size_a = m*lda*sizeof(double);
+    unsigned int size_b = ldb*n*sizeof(double);
 
     // Reserva en CPU
     double * device_A = (double *)malloc(size_a);

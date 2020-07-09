@@ -40,8 +40,9 @@ int print_trace_format() {
     return 1;
 }
 
+// Generates a random vector of numbers between 0.1 and RAND_MAX + 0.1
 void random_vector(double *A, int n) {
-    for (unsigned int i = 0; i < n; ++i) A[i] = (double)rand() / (double)RAND_MAX;
+    for (unsigned int i = 0; i < n; ++i) A[i] = ((double)rand() / (double)RAND_MAX) + 0.1;
 }
 
 void zero_vector(double *A, int n) {
@@ -77,7 +78,7 @@ void inicializar_matrices_DTRSM(double **A, double **B, int m, int n) {
     *B = (double*) malloc(m*n*sizeof(double));
 
     srand(0); // Inicializa la semilla aleatoria
-    random_vector(*A,m*m); // TODO: Llenar A con un random que no ponga 0s en la diagonal
+    random_vector(*A,m*m);
     random_vector(*B,n*m);
 }
 
@@ -122,8 +123,8 @@ int main(int argc, char** argv){
             inicializar_matrices_DGEMM(&A, &B, &C, tam1, tam2, tam3);
             break;
         case 3:
-            // m = tam1; n = 32
-            inicializar_matrices_DTRSM(&A, &B, tam1, 32);
+            // m = 32; n = tam1
+            inicializar_matrices_DTRSM(&A, &B, 32, tam1);
             break;
         case 4:
         case 5:
@@ -141,7 +142,8 @@ int main(int argc, char** argv){
         case 2: // DGEMM con memoria comaprtida
             dgemm_gpu(algorithm, tam1, tam3, tam2, alpha, A, tam2, B, tam3, 1, C, tam3);
             break;
-        case 3: // DTRSM A (32 x 32) B (32 x tam1)
+        case 3: // DTRSM A (32 x 32) B (32 x tam1) versión Shared/Shuffle
+        case 7: // DTRSM A (32 x 32) B (32 x tam1) versión Shared/Shuffle
             dtrsm_gpu(algorithm, 32, tam1, alpha, A, 32, B, 32);
             break;
         case 4: // DTRSM con bloques de k*32 recorriendo secuencialmente A (tam1 x tam1) B (tam1 x tam2)
@@ -171,11 +173,18 @@ int main(int argc, char** argv){
             free(A); free(B); free(C);
             break;
         case 3:
+            print_matrix_from_vector(B, 32, tam1);
+            free(A); free(B);
+            break;
         case 4:
         case 5:
         case 6:
             print_matrix_from_vector(B, tam1, tam2);
-            free(A); free(B); free(transposedA); free(transposedB);
+            free(A); free(B);
+    }
+    
+    if(algorithm == 6) {
+        free(transposedA); free(transposedB);
     }
     
 	return 0;

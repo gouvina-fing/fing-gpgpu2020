@@ -49,6 +49,8 @@ __global__ void dgemm_global_kernel(int p, const double alpha, double *d_A, int 
 // Cada bloque calcula un tile de C, cada hilo un elemento de C.
 // Cada bloque va pasando tiles de A y B a memoria compartida, multiplicandolos, acumulando el resultado en un registro y luego cargando otros tiles de A y B.
 // Asumimos que los tamaños del tile siempre son multiplos del tamaño de bloque
+// Capaz da peor que la de memoria global. Habría que usar la metrica de occupancy (y la de efficiency load/store y cantidad de accesos a mem global), si la memoria compartida es muy grande (porque double 32x32) pueden quedar ociosos
+//      Se puede probar variando el tamaño del bloque también
 __global__ void dgemm_shared_kernel(int p, const double alpha, double *d_A, int lda, double *d_B, int ldb, double beta, double *d_C, int ldc) {
     __shared__ double tile_A[TILE_WIDTH][TILE_HEIGHT];
     __shared__ double tile_B[TILE_WIDTH][TILE_HEIGHT];

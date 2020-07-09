@@ -1,8 +1,14 @@
-# TODO: Compilar con la flag de nuestra tarjeta (googlear, arch no sé que es para las P100 del cluster)
-# nvcc -I/usr/local/cuda/include -o a.out -arch sm_52 -Xcompiler -fopenmp test.cu -L/usr/local/cuda/lib64 -lcudart -lcublas -lcusolver ????
+# -arch=sm_75 Turing 1660 y 1660S
+# -arch=sm_60 Pascal P-100
 
 all:
-	nvcc main.cpp dgemm.cu dtrsm.cu -o labgpu20.x -O3 -L/usr/X11R6/lib -lm -lpthread -lX11 -lcublas
+	nvcc main.cpp dgemm.cu dtrsm.cu -o labgpu20.x -O3 -L/usr/X11R6/lib -lm -lpthread -lX11 -lcublas -arch=sm_75
 
 no_l1:
-	nvcc -Xptxas -dlcm=cg main.cpp dgemm.cu dtrsm.cu -o labgpu20.x -O3 -L/usr/X11R6/lib -lm -lpthread -lX11 -lcublas
+	nvcc -Xptxas -dlcm=cg main.cpp dgemm.cu dtrsm.cu -o labgpu20_no_l1.x -O3 -L/usr/X11R6/lib -lm -lpthread -lX11 -lcublas -arch=sm_75
+
+cluster:
+	nvcc main.cpp dgemm.cu dtrsm.cu -o labgpu20.x -O3 -L/usr/X11R6/lib -lm -lpthread -lX11 -lcublas -arch=sm_60
+
+cluster_no_l1:
+	nvcc -Xptxas -dlcm=cg main.cpp dgemm.cu dtrsm.cu -o labgpu20_no_l1.x -O3 -L/usr/X11R6/lib -lm -lpthread -lX11 -lcublas -arch=sm_60
