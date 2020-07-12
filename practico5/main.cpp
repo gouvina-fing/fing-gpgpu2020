@@ -105,7 +105,7 @@ int main(int argc, char** argv){
 
     // Get the rest of parameters
     tam1 = atoi(argv[2]); // tam1 is always passed
-	if(algorithm != 3) {
+	if(algorithm != 3 && algorithm != 7) {
         if (argc < 4) return print_trace_format();
         tam2 = atoi(argv[3]); // tam2 is not required for algorithm 3
 
@@ -123,6 +123,7 @@ int main(int argc, char** argv){
             inicializar_matrices_DGEMM(&A, &B, &C, tam1, tam2, tam3);
             break;
         case 3:
+        case 7:
             // m = 32; n = tam1
             inicializar_matrices_DTRSM(&A, &B, 32, tam1);
             break;
@@ -173,6 +174,7 @@ int main(int argc, char** argv){
             free(A); free(B); free(C);
             break;
         case 3:
+        case 7:
             print_matrix_from_vector(B, 32, tam1);
             free(A); free(B);
             break;
