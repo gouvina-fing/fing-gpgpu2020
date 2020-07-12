@@ -110,10 +110,11 @@ void dtrsm_32k(int block_amount_x, int block_amount_y, const double alpha, doubl
     // B es de 32k x n. En donde k == block_amount_y y n = 32*block_amount_x
 
     int stride_A, stride_B, stride_C;
-    dim3 tamGrid(block_amount_x, 1); // Grid dimension
+    dim3 tamGrid(1, block_amount_y); // Grid dimension
+    dim3 tamGridDGEMM(block_amount_y, 1);
     dim3 tamBlock(TILE_WIDTH, TILE_HEIGHT); // Block dimension
 
-    for(int i = 0; i < block_amount_y; ++i) {
+    for(int i = 0; i < block_amount_x; ++i) {
         stride_A = meta_stride_A + 32*i*lda; // Move the stride in A to the next block of rows.
         stride_B = meta_stride_B; // Move the stride in B to the previous block of rows (Not used when i = 0).
         stride_C = meta_stride_B + 32*i*ldb; // Move the stride in C to the next block of rows.
@@ -123,7 +124,7 @@ void dtrsm_32k(int block_amount_x, int block_amount_y, const double alpha, doubl
             } else { // No diagonal
                 // Bi = Bi - Aij * Bj
                 // Bi = 32 x n (fila superior). Bj = 32 x n (fila actual a actualizar). A = 32 x 32. p == n
-                dgemm_shared_kernel<<<tamGrid, tamBlock>>>(32, -1.0, d_A, lda, d_B, ldb, 1.0, d_B, ldb, stride_A, stride_B, stride_C);
+                dgemm_shared_kernel<<<tamGridDGEMM, tamBlock>>>(32, -1.0, d_A, lda, d_B, ldb, 1.0, d_B, ldb, stride_A, stride_B, stride_C);
             }
             stride_A += 32; // Move the stride in A to the next column block
             stride_B += 32*ldb;
@@ -138,25 +139,25 @@ void dtrsm_32k(int block_amount_x, int block_amount_y, const double alpha, doubl
 // NOTE: Ver letra y Figura 6 para las operaciones con las submatrices
 //       Puede ser implementada en CPU (invocando los kernels correspondientes en cada caso, así es moar sencillo)
 // NOTE: No es obligatorio experimentar con muchos valores de K.
-void dtrsm_recursive(int block_amount_x, int m, const double alpha, double *d_A, int lda, double *d_B, int ldb, int stride_A, int stride_B) {
+void dtrsm_recursive(int m, int block_amount_y, const double alpha, double *d_A, int lda, double *d_B, int ldb, int stride_A, int stride_B) {
     if(m == 64) { // Paso base, A 32*2 x 32*2
-        dtrsm_32k(block_amount_x, 2, alpha, d_A, lda, d_B, ldb, stride_A, stride_B);
+        dtrsm_32k(2, block_amount_y, alpha, d_A, lda, d_B, ldb, stride_A, stride_B);
     } else { // Paso recursivo
         // A y B se parten en: |A11  0 |  |B1|
         //                     |A21 A22|  |B2|
 
         m /= 2;
-        dim3 tamGrid(block_amount_x, m/32); // Grid dimension
+        dim3 tamGridDGEMM(block_amount_y, m/32);
         dim3 tamBlock(TILE_WIDTH, TILE_HEIGHT); // Block dimension
         
         // Se procesa A11, manteniendo direcciones de memoria.
-        dtrsm_recursive(block_amount_x, m, alpha, d_A, lda, d_B, ldb, stride_A, stride_B);
+        dtrsm_recursive(m, block_amount_y, alpha, d_A, lda, d_B, ldb, stride_A, stride_B);
 
         // Se procesa A21 (DGEMM), shifteando las direcciones de memoria al bloque de filas de abajo.
-        dgemm_shared_kernel<<<tamGrid, tamBlock>>>(m, -1.0, d_A, lda, d_B, ldb, 1.0, d_B, ldb, stride_A + m*lda, stride_B, stride_B + m*ldb);
+        dgemm_shared_kernel<<<tamGridDGEMM, tamBlock>>>(m, -1.0, d_A, lda, d_B, ldb, 1.0, d_B, ldb, stride_A + m*lda, stride_B, stride_B + m*ldb);
 
         // Se procesa A22, shifteando las direcciones de memoria al bloque de filas de abajo y A m columnas hacia la derecha.
-        dtrsm_recursive(block_amount_x, m, alpha, d_A, lda, d_B, ldb, stride_A + m*lda + m, stride_B + m*ldb);
+        dtrsm_recursive(m, block_amount_y, alpha, d_A, lda, d_B, ldb, stride_A + m*lda + m, stride_B + m*ldb);
     }
 }
 
@@ -198,7 +199,7 @@ void dtrsm_gpu(int algorithm, int m, int n, const double alpha, double *A, int l
             dtrsm_32k(block_amount_x, block_amount_y, alpha, device_A, lda, device_B, ldb, 0, 0);
             break;
         case 5: // Versión recursiva.
-            dtrsm_recursive(block_amount_x, m, alpha, device_A, lda, device_B, ldb, 0, 0);
+            dtrsm_recursive(m, block_amount_y, alpha, device_A, lda, device_B, ldb, 0, 0);
             break;
         case 7: // Versión 32 x n Shuffle/Shared (la menos eficiente)
             dtrsm_32_shuffle_kernel<<<tamGrid, tamBlock>>>(alpha, device_A, lda, device_B, ldb, 0, 0);
