@@ -35,25 +35,25 @@ __global__ void dtrsm_32_shared_kernel(const double alpha, double *d_A, int lda,
     y = (blockIdx.y * blockDim.y) + threadIdx.y; // Row
     memory_index_x = threadIdx.x;
     memory_index_y = threadIdx.y;
-    row_b = y*ldb;
+    row_b = x*ldb;
 
     // Cada bloque guarda su pixel de A en memoria compartida
-    shared_A[memory_index_y][memory_index_x] = d_A[memory_index_y*lda + memory_index_x + stride_A];
-    aux = alpha*d_B[row_b + x + stride_B];
+    shared_A[memory_index_x][memory_index_y] = d_A[memory_index_x*lda + memory_index_y + stride_A];
+    aux = alpha*d_B[row_b + y + stride_B];
     __syncthreads();
 
-    for(int k = 0; k <= TILE_HEIGHT; ++k) {
-        if(k == memory_index_y) {
+    for(int k = 0; k <= TILE_WIDTH; ++k) {
+        if(k == memory_index_x) {
             // Se llegó a la diagonal de A, la incógnita queda resuelta y se guarda su resultado
-            tile_B[k][memory_index_x] = aux/shared_A[k][k];
+            tile_B[k][memory_index_y] = aux/shared_A[k][k];
         }
-        __syncthreads();
-        if(k < memory_index_y) {
+        __syncwarp();
+        if(k < memory_index_x) {
             // Se va acumulando la resta de productos mientras se sube por la diagonal de A.
-            aux -= shared_A[memory_index_y][k]*tile_B[k][memory_index_x];
+            aux -= shared_A[memory_index_x][k]*tile_B[k][memory_index_y];
         }
     }
-    d_B[row_b + x + stride_B] = tile_B[memory_index_y][memory_index_x];
+    d_B[row_b + y + stride_B] = tile_B[memory_index_x][memory_index_y];
 }
 
 // Ej 2.1 a-2) Kernel para el caso 32 x n con los threads de un warp comunicandose utilizando la primitiva __shfl_sync
@@ -63,30 +63,33 @@ __global__ void dtrsm_32_shuffle_kernel(const double alpha, double *d_A, int lda
     double result, aux, aux2;
     int x, y, row_b, memory_index_x, memory_index_y;
 
-    x = (blockIdx.x * blockDim.x) + threadIdx.x; // Column
-    y = (blockIdx.y * blockDim.y) + threadIdx.y; // Row
+    x = (blockIdx.x * blockDim.x) + threadIdx.x; // Row
+    y = (blockIdx.y * blockDim.y) + threadIdx.y; // Column
     memory_index_x = threadIdx.x;
     memory_index_y = threadIdx.y;
-    row_b = y*ldb;
+    row_b = x*ldb;
 
     // Cada bloque guarda su pixel de A en memoria compartida
-    shared_A[memory_index_y][memory_index_x] = d_A[memory_index_y*lda + memory_index_x + stride_A];
-    aux = alpha*d_B[row_b + x + stride_B];
+    shared_A[memory_index_x][memory_index_y] = d_A[memory_index_x*lda + memory_index_y + stride_A];
+    aux = alpha*d_B[row_b + y + stride_B];
+
     __syncthreads();
 
-    for(int k = 0; k <= TILE_HEIGHT; ++k) {
-        if(k == memory_index_y) {
+    result = 0;
+
+    for(int k = 0; k <= TILE_WIDTH; ++k) {
+        if(k == memory_index_x) {
             // Se llegó a la diagonal de A, la incógnita queda resuelta y se guarda su resultado
             result = aux/shared_A[k][k];
         }
-        __syncthreads();
+        __syncwarp();
         aux2 = __shfl_sync(0xffffffff, result, k);
-        if(k < memory_index_y) {
+        if(k < memory_index_x) {
             // Se va acumulando la resta de productos mientras se sube por la diagonal de A.
-            aux -= shared_A[memory_index_y][k]*aux2;
+            aux -= shared_A[memory_index_x][k]*aux2;
         }
     }
-    d_B[row_b + x + stride_B] = result;
+    d_B[row_b + y + stride_B] = result;
 }
 
 __global__ void dgemm_shared_kernel(int p, const double alpha, double *d_A, int lda, double *d_B, int ldb, double beta, double *d_C, int ldc, int stride_A, int stride_B, int stride_C);
@@ -181,8 +184,8 @@ void dtrsm_gpu(int algorithm, int m, int n, const double alpha, double *A, int l
 
     // Etapa 3: Definir grilla
     // Se crea una grilla con las dimensiones de B
-    int block_amount_x = n / TILE_WIDTH + (n % TILE_WIDTH != 0); // Division with ceiling
-    int block_amount_y = m / TILE_HEIGHT + (m % TILE_HEIGHT != 0); // Division with ceiling
+    int block_amount_x = m / TILE_WIDTH + (m % TILE_WIDTH != 0); // Division with ceiling
+    int block_amount_y = n / TILE_HEIGHT + (n % TILE_HEIGHT != 0); // Division with ceiling
     dim3 tamGrid(block_amount_x, block_amount_y); // Grid dimension
     dim3 tamBlock(TILE_WIDTH, TILE_HEIGHT); // Block dimension
 
