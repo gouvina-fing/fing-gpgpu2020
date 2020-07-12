@@ -102,16 +102,13 @@ __global__ void dgemm_shared_kernel(int p, const double alpha, double *d_A, int 
 //      - Cada bloque de threads procesará 32 columnasde B (Recorriendo los tiles de A_{i,j} secuencialmente de izq a der y arriba hacia abajo)
 //          Si el tile es diagonal la operacion es idéntica al caso anterior.
 //          Si el tile no es diagonal la operación a realizar es la actualización del tile B_{i} mediante una operación DGEMM con tiles de 32x32
-//              NOTE: Ver Figura 5. Observar que una operación muy similar es realizada como parte del procedimiento por tiles de la operación DGEMM de la parte anterior.
-// NOTE: El parlaelismo grande está en la matriz B (cada fila de bloquecito en B se resuelve en paralelo). Pero las recorridas por los bloques de A son seriales
-// Hay que recorrer secuencial en A porque es el orden que te impone la operación
 void dtrsm_32k(int block_amount_x, int block_amount_y, const double alpha, double *d_A, int lda, double *d_B, int ldb, int meta_stride_A, int meta_stride_B) {
-    // A es de 32k x 32k. En donde k == block_amount_y
-    // B es de 32k x n. En donde k == block_amount_y y n = 32*block_amount_x
+    // A es de 32k x 32k. En donde k == block_amount_x
+    // B es de 32k x n. En donde k == block_amount_x y n = 32*block_amount_y
 
     int stride_A, stride_B, stride_C;
     dim3 tamGrid(1, block_amount_y); // Grid dimension
-    dim3 tamGridDGEMM(block_amount_y, 1);
+    dim3 tamGridDGEMM(block_amount_y, 1); // Grid dimension para DGEMM, accede por filas en lugar de columnas por lo que está espejado
     dim3 tamBlock(TILE_WIDTH, TILE_HEIGHT); // Block dimension
 
     for(int i = 0; i < block_amount_x; ++i) {
@@ -134,11 +131,8 @@ void dtrsm_32k(int block_amount_x, int block_amount_y, const double alpha, doubl
 
 
 // Ej 3.3) Kernel que implementa una solución recursiva de DTRSM empleando DGEMM y dividiendo la matriz triangular en tiles de 32x32. 
-//         El paso base es DTRSM 32 x n ó DTRSM 32k x n (para un k pequeño) (TODO: Elegir viendo Figura 6 y video. NOTE: No es necesario usar k=32, podemos usar algo más chico)
+//         El paso base es DTRSM 32 x n ó DTRSM 32k x n (para un k pequeño)
 //         El paso recursivo divide la matriz A en 4 submatrices (Y a B de forma coherente).
-// NOTE: Ver letra y Figura 6 para las operaciones con las submatrices
-//       Puede ser implementada en CPU (invocando los kernels correspondientes en cada caso, así es moar sencillo)
-// NOTE: No es obligatorio experimentar con muchos valores de K.
 void dtrsm_recursive(int m, int block_amount_y, const double alpha, double *d_A, int lda, double *d_B, int ldb, int stride_A, int stride_B) {
     if(m == 64) { // Paso base, A 32*2 x 32*2
         dtrsm_32k(2, block_amount_y, alpha, d_A, lda, d_B, ldb, stride_A, stride_B);
@@ -147,7 +141,7 @@ void dtrsm_recursive(int m, int block_amount_y, const double alpha, double *d_A,
         //                     |A21 A22|  |B2|
 
         m /= 2;
-        dim3 tamGridDGEMM(block_amount_y, m/32);
+        dim3 tamGridDGEMM(block_amount_y, m/32); // Grid dimension para DGEMM, accede por filas en lugar de columnas por lo que está espejado
         dim3 tamBlock(TILE_WIDTH, TILE_HEIGHT); // Block dimension
         
         // Se procesa A11, manteniendo direcciones de memoria.
@@ -163,9 +157,7 @@ void dtrsm_recursive(int m, int block_amount_y, const double alpha, double *d_A,
 
 // A y B son arreglos unidimensionales de m × lda y n × ldb elementos.
 // Para A el triángulo inferior del bloque superior izquierdo de tamaño m×m debe contener a A en su totalidad (El triangulo superior no es referenciado)
-//
 // La operación es in-place (los resultados se devuelven en la matriz B)
-// TODO: En CuBlas alpha es un double *
 void dtrsm_gpu(int algorithm, int m, int n, const double alpha, double *A, int lda, double *B, int ldb) {
     // Etapa 1: Reserva de Memoria
     unsigned int size_a = m*lda*sizeof(double);
@@ -277,5 +269,4 @@ void dtrsm_cublas(int m, int n, const double *alpha, double *A, int lda, double 
     // Etapa 6: Liberación de Memoria
     CUDA_CHK(cudaFree(device_A));
     CUDA_CHK(cudaFree(device_B));
-    //return EXIT_SUCCESS;
 }

@@ -33,11 +33,11 @@ int print_trace_format() {
         printf("\t 0 - DGEMM CPU A (tam1 x tam2) B (tam2 x tam3)\n");
         printf("\t 1 - DGEMM en memoria global A (tam1 x tam2) B (tam2 x tam3)\n");
         printf("\t 2 - DGEMM con memoria compartida A (tam1 x tam2) B (tam2 x tam3)\n");
-        printf("\t 3 - DTRSM TODO A (32 x 32) B (32 x tam1)\n");
+        printf("\t 3 - DTRSM con memoria compartida A (32 x 32) B (32 x tam1)\n");
         printf("\t 4 - DTRSM con bloques de k*32 recorriendo secuencialmente A (tam1 x tam1) B (tam1 x tam2)\n");
         printf("\t 5 - DTRSM versión recursiva A (tam1 x tam1) B (tam1 x tam2)\n");
         printf("\t 6 - DTRSM de la biblioteca CuBlas A (tam1 x tam1) B (tam1 x tam2)\n");
-        printf("\t 3 - DTRSM TODO A (32 x 32) B (32 x tam1)\n");
+        printf("\t 3 - DTRSM con __shfl_sync A (32 x 32) B (32 x tam1)\n");
     return 1;
 }
 
@@ -147,8 +147,8 @@ int main(int argc, char** argv){
         case 2: // DGEMM con memoria comaprtida
             dgemm_gpu(algorithm, tam1, tam3, tam2, alpha, A, tam2, B, tam3, 1, C, tam3);
             break;
-        case 3: // DTRSM A (32 x 32) B (32 x tam1) versión Shared/Shuffle
-        case 7: // DTRSM A (32 x 32) B (32 x tam1) versión Shared/Shuffle
+        case 3: // DTRSM con memoria compartida A (32 x 32) B (32 x tam1) versión Shared/Shuffle
+        case 7: // DTRSM con __shfl_sync A (32 x 32) B (32 x tam1) versión Shared/Shuffle
             dtrsm_gpu(algorithm, 32, tam1, alpha, A, 32, B, tam1);
             break;
         case 4: // DTRSM con bloques de k*32 recorriendo secuencialmente A (tam1 x tam1) B (tam1 x tam2)
