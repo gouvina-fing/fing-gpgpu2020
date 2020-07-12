@@ -174,18 +174,18 @@ int main(int argc, char** argv){
         case 0:
         case 1:
         case 2:
-            print_matrix_from_vector(C, tam1, tam3);
+            //print_matrix_from_vector(C, tam1, tam3);
             free(A); free(B); free(C);
             break;
         case 3:
         case 7:
-            print_matrix_from_vector(B, 32, tam1);
+            //print_matrix_from_vector(B, 32, tam1);
             free(A); free(B);
             break;
         case 4:
         case 5:
         case 6:
-            print_matrix_from_vector(B, tam1, tam2);
+            //print_matrix_from_vector(B, tam1, tam2);
             free(A); free(B);
     }
     
