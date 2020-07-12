@@ -145,7 +145,7 @@ int main(int argc, char** argv){
             break;
         case 3: // DTRSM A (32 x 32) B (32 x tam1) versión Shared/Shuffle
         case 7: // DTRSM A (32 x 32) B (32 x tam1) versión Shared/Shuffle
-            dtrsm_gpu(algorithm, 32, tam1, alpha, A, 32, B, 32);
+            dtrsm_gpu(algorithm, 32, tam1, alpha, A, 32, B, tam1);
             break;
         case 4: // DTRSM con bloques de k*32 recorriendo secuencialmente A (tam1 x tam1) B (tam1 x tam2)
         case 5: // DTRSM versión recursiva A (tam1 x tam1) B (tam1 x tam2)

@@ -46,11 +46,13 @@ __global__ void dtrsm_32_shared_kernel(const double alpha, double *d_A, int lda,
     aux = alpha*d_B[row_b + x + stride_B];
     __syncthreads();
 
-    for(int k = 0; k <= memory_index_y; ++k) {
+    for(int k = 0; k <= TILE_HEIGHT; ++k) {
         if(k == memory_index_y) {
             // Se llegó a la diagonal de A, la incógnita queda resuelta y se guarda su resultado
             tile_B[k][memory_index_x] = aux/shared_A[k][k];
-        } else {
+        }
+        __syncthreads();
+        if(k < memory_index_y) {
             // Se va acumulando la resta de productos mientras se sube por la diagonal de A.
             aux -= shared_A[memory_index_y][k]*tile_B[k][memory_index_x];
         }
@@ -210,7 +212,9 @@ void dtrsm_recursive(int m, int block_amount_y, const double alpha, double *d_A,
 void dtrsm_gpu(int algorithm, int m, int n, const double alpha, double *A, int lda, double *B, int ldb) {
     // Etapa 1: Reserva de Memoria
     unsigned int size_a = m*lda*sizeof(double);
-    unsigned int size_b = ldb*n*sizeof(double);
+    unsigned int size_b = m*ldb*sizeof(double);
+
+    printf("m=%i; n=%i; lda=%i; ldb=%i \n", m, n, lda, ldb);
 
     // Reserva en CPU
     double * device_A = (double *)malloc(size_a);
@@ -226,8 +230,8 @@ void dtrsm_gpu(int algorithm, int m, int n, const double alpha, double *A, int l
 
     // Etapa 3: Definir grilla
     // Se crea una grilla con las dimensiones de B
-    int block_amount_x = m / TILE_WIDTH + (m % TILE_WIDTH != 0); // Division with ceiling
-    int block_amount_y = n / TILE_HEIGHT + (n % TILE_HEIGHT != 0); // Division with ceiling
+    int block_amount_x = n / TILE_WIDTH + (n % TILE_WIDTH != 0); // Division with ceiling
+    int block_amount_y = m / TILE_HEIGHT + (m % TILE_HEIGHT != 0); // Division with ceiling
     dim3 tamGrid(block_amount_x, block_amount_y); // Grid dimension
     dim3 tamBlock(TILE_WIDTH, TILE_HEIGHT); // Block dimension
 
