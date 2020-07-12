@@ -149,7 +149,7 @@ int main(int argc, char** argv){
             break;
         case 4: // DTRSM con bloques de k*32 recorriendo secuencialmente A (tam1 x tam1) B (tam1 x tam2)
         case 5: // DTRSM versión recursiva A (tam1 x tam1) B (tam1 x tam2)
-            dtrsm_gpu(algorithm, tam1, tam2, alpha, A, tam1, B, tam1);
+            dtrsm_gpu(algorithm, tam1, tam2, alpha, A, tam1, B, tam2);
             break;
         case 6: // DTRSM de la biblioteca CuBlas A (tam1 x tam1) B (tam1 x tam2)
             transposedA = (double*) malloc(tam1*tam1*sizeof(double));

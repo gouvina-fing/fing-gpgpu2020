@@ -64,8 +64,8 @@ __global__ void dtrsm_32_shared_kernel(const double alpha, double *d_A, int lda,
 __global__ void dtrsm_32_shuffle_kernel(const double alpha, double *d_A, int lda, double *d_B, int ldb, int stride_A, int stride_B) {
     __shared__ double shared_A[TILE_WIDTH][TILE_HEIGHT];
 
-    int x, y, row_a, row_b, memory_index_x, memory_index_y;
-    double result, aux;
+    double result, aux, aux2;
+    int x, y, row_b, memory_index_x, memory_index_y;
 
     x = (blockIdx.x * blockDim.x) + threadIdx.x; // Column
     y = (blockIdx.y * blockDim.y) + threadIdx.y; // Row
@@ -76,25 +76,19 @@ __global__ void dtrsm_32_shuffle_kernel(const double alpha, double *d_A, int lda
     // Cada bloque guarda su pixel de A en memoria compartida
     shared_A[memory_index_y][memory_index_x] = d_A[memory_index_y*lda + memory_index_x + stride_A];
     aux = alpha*d_B[row_b + x + stride_B];
-    
     __syncthreads();
 
-    // Los hilos de la fila 0 resuelven su incógnita, el resto adelanta la solución parcial de la misma.
-    result = alpha*d_B[row_b + x]/shared_A[memory_index_y][memory_index_y];
-    aux = __shfl_sync(0xffffffff, result, 0);
-
-    __syncthreads();
-
-    /*for(int k = 0; k < memory_index_y; ++k) {
-        result -= shared_A[memory_index_y][k]*__shfl_sync(0xffffffff, result, k)/shared_A[memory_index_y][memory_index_y];
-    }*/
-
-    // Se itera por cada incógnita ya resuelta, usando su valor para resolver la siguiente y el resto parcialmente
-    for(int k = 0; k < TILE_HEIGHT; ++k) {
-        if(k < memory_index_y) {
-            result -= shared_A[memory_index_y][k]*aux/shared_A[memory_index_y][memory_index_y];
+    for(int k = 0; k <= TILE_HEIGHT; ++k) {
+        if(k == memory_index_y) {
+            // Se llegó a la diagonal de A, la incógnita queda resuelta y se guarda su resultado
+            result = aux/shared_A[k][k];
         }
-        aux = __shfl_sync(0xffffffff, result, k+1);
+        __syncthreads();
+        aux2 = __shfl_sync(0xffffffff, result, k);
+        if(k < memory_index_y) {
+            // Se va acumulando la resta de productos mientras se sube por la diagonal de A.
+            aux -= shared_A[memory_index_y][k]*aux2;
+        }
     }
 
     d_B[row_b + x + stride_B] = result;
@@ -151,26 +145,27 @@ __global__ void dgemm_shared_kernel(int p, const double alpha, double *d_A, int 
 // NOTE: El parlaelismo grande está en la matriz B (cada fila de bloquecito en B se resuelve en paralelo). Pero las recorridas por los bloques de A son seriales
 // Hay que recorrer secuencial en A porque es el orden que te impone la operación
 void dtrsm_32k(int block_amount_x, int block_amount_y, const double alpha, double *d_A, int lda, double *d_B, int ldb, int meta_stride_A, int meta_stride_B) {
-    // A es de 32k x 32k. En donde k == block_amount_x
-    // B es de 32k x n. En donde k == block_amount_x y n = 32*block_amount_y
+    // A es de 32k x 32k. En donde k == block_amount_y
+    // B es de 32k x n. En donde k == block_amount_y y n = 32*block_amount_x
 
     int stride_A, stride_B, stride_C;
-    dim3 tamGrid(1, block_amount_y); // Grid dimension
+    dim3 tamGrid(block_amount_x, 1); // Grid dimension
     dim3 tamBlock(TILE_WIDTH, TILE_HEIGHT); // Block dimension
 
-    for(int i = 0; i < block_amount_x; ++i) {
+    for(int i = 0; i < block_amount_y; ++i) {
         stride_A = meta_stride_A + 32*i*lda; // Move the stride in A to the next block of rows.
-        stride_B = meta_stride_B + 32*(i-1)*ldb; // Move the stride in B to the previous block of rows (Not used when i = 0).
-        stride_C = meta_stride_B + stride_B + 32*ldb; // Move the stride in C to the next block of rows.
+        stride_B = meta_stride_B; // Move the stride in B to the previous block of rows (Not used when i = 0).
+        stride_C = meta_stride_B + 32*i*ldb; // Move the stride in C to the next block of rows.
         for(int j = 0; j <= i; ++j) {
             if (i == j) { // Diagonal
                 dtrsm_32_shared_kernel<<<tamGrid, tamBlock>>>(alpha, d_A, lda, d_B, ldb, stride_A, stride_C);
             } else { // No diagonal
                 // Bi = Bi - Aij * Bj
-                // Bi = 32 x n (fila superior). Bj = 32 x n (fila inferior a actualizar). A = 32 x 32. p == n
-                dgemm_shared_kernel<<<tamGrid, tamBlock>>>(32*block_amount_y, -1.0, d_A, lda, d_B, ldb, 1.0, d_B, ldb, stride_A, stride_B, stride_C);
+                // Bi = 32 x n (fila superior). Bj = 32 x n (fila actual a actualizar). A = 32 x 32. p == n
+                dgemm_shared_kernel<<<tamGrid, tamBlock>>>(32, -1.0, d_A, lda, d_B, ldb, 1.0, d_B, ldb, stride_A, stride_B, stride_C);
             }
             stride_A += 32; // Move the stride in A to the next column block
+            stride_B += 32*ldb;
         }
     }
 }
@@ -182,25 +177,25 @@ void dtrsm_32k(int block_amount_x, int block_amount_y, const double alpha, doubl
 // NOTE: Ver letra y Figura 6 para las operaciones con las submatrices
 //       Puede ser implementada en CPU (invocando los kernels correspondientes en cada caso, así es moar sencillo)
 // NOTE: No es obligatorio experimentar con muchos valores de K.
-void dtrsm_recursive(int m, int block_amount_y, const double alpha, double *d_A, int lda, double *d_B, int ldb, int stride_A, int stride_B) {
+void dtrsm_recursive(int block_amount_x, int m, const double alpha, double *d_A, int lda, double *d_B, int ldb, int stride_A, int stride_B) {
     if(m == 64) { // Paso base, A 32*2 x 32*2
-        dtrsm_32k(2, block_amount_y, alpha, d_A, lda, d_B, ldb, stride_A, stride_B);
+        dtrsm_32k(block_amount_x, 2, alpha, d_A, lda, d_B, ldb, stride_A, stride_B);
     } else { // Paso recursivo
         // A y B se parten en: |A11  0 |  |B1|
         //                     |A21 A22|  |B2|
 
-        m = m/2;
-        dim3 tamGrid(m/32, block_amount_y); // Grid dimension
+        m /= 2;
+        dim3 tamGrid(block_amount_x, m/32); // Grid dimension
         dim3 tamBlock(TILE_WIDTH, TILE_HEIGHT); // Block dimension
         
         // Se procesa A11, manteniendo direcciones de memoria.
-        dtrsm_recursive(m, block_amount_y, alpha, d_A, lda, d_B, ldb, stride_A, stride_B);
+        dtrsm_recursive(block_amount_x, m, alpha, d_A, lda, d_B, ldb, stride_A, stride_B);
 
         // Se procesa A21 (DGEMM), shifteando las direcciones de memoria al bloque de filas de abajo.
-        dgemm_shared_kernel<<<tamGrid, tamBlock>>>(32*block_amount_y, -1.0, d_A, lda, d_B, ldb, 1.0, d_B, ldb, stride_A + m*lda, stride_B, stride_B + m*ldb);
+        dgemm_shared_kernel<<<tamGrid, tamBlock>>>(m, -1.0, d_A, lda, d_B, ldb, 1.0, d_B, ldb, stride_A + m*lda, stride_B, stride_B + m*ldb);
 
         // Se procesa A22, shifteando las direcciones de memoria al bloque de filas de abajo y A m columnas hacia la derecha.
-        dtrsm_recursive(m, block_amount_y, alpha, d_A, lda, d_B, ldb, stride_A + m*lda + m, stride_B + m*ldb);
+        dtrsm_recursive(block_amount_x, m, alpha, d_A, lda, d_B, ldb, stride_A + m*lda + m, stride_B + m*ldb);
     }
 }
 
@@ -213,8 +208,6 @@ void dtrsm_gpu(int algorithm, int m, int n, const double alpha, double *A, int l
     // Etapa 1: Reserva de Memoria
     unsigned int size_a = m*lda*sizeof(double);
     unsigned int size_b = m*ldb*sizeof(double);
-
-    printf("m=%i; n=%i; lda=%i; ldb=%i \n", m, n, lda, ldb);
 
     // Reserva en CPU
     double * device_A = (double *)malloc(size_a);
@@ -244,7 +237,7 @@ void dtrsm_gpu(int algorithm, int m, int n, const double alpha, double *A, int l
             dtrsm_32k(block_amount_x, block_amount_y, alpha, device_A, lda, device_B, ldb, 0, 0);
             break;
         case 5: // Versión recursiva.
-            dtrsm_recursive(m, block_amount_y, alpha, device_A, lda, device_B, ldb, 0, 0);
+            dtrsm_recursive(block_amount_x, m, alpha, device_A, lda, device_B, ldb, 0, 0);
             break;
         case 7: // Versión 32 x n Shuffle/Shared (la menos eficiente)
             dtrsm_32_shuffle_kernel<<<tamGrid, tamBlock>>>(alpha, device_A, lda, device_B, ldb, 0, 0);
