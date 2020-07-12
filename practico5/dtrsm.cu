@@ -9,9 +9,6 @@ using namespace std;
 
 #define TILE_WIDTH   32
 #define TILE_HEIGHT  32
-// TODO: Definir estos para cargar la shared memory (Cambiarles el nombre?)
-#define BLOCK_WIDTH  TILE_WIDTH     // Width of shared memory block
-#define BLOCK_HEIGHT TILE_HEIGHT    // Height of shared memory block
 
 // Resolución de ecuaciones matriciales. Usando doble presición
 // A × X = αB, donde α es un escalar, X y B ∈ R^{m×n}, y A ∈ R^{m×m} es una matriz triangular (inferior para esta implementación).
@@ -26,8 +23,7 @@ using namespace std;
 //      - Cada thread lee datos calculados por los threads del warp del índice anterior. Para compartir datos entre los hilos del warp tenemos las siguientes opciones:
 
 // Ej 2.1 a-1) Kernel para el caso 32 x n con los threads de un warp comunicandose a través memoria compartida
-    // El paralelismo a nivel de warps es implicito, porque dentro de un warp se avanza en el código secuencialmente
-
+// El paralelismo a nivel de warps es implicito, porque dentro de un warp se avanza en el código secuencialmente
 __global__ void dtrsm_32_shared_kernel(const double alpha, double *d_A, int lda, double *d_B, int ldb, int stride_A, int stride_B) {
     __shared__ double shared_A[TILE_WIDTH][TILE_HEIGHT];
     __shared__ double tile_B[TILE_WIDTH][TILE_HEIGHT];
@@ -90,48 +86,10 @@ __global__ void dtrsm_32_shuffle_kernel(const double alpha, double *d_A, int lda
             aux -= shared_A[memory_index_y][k]*aux2;
         }
     }
-
     d_B[row_b + x + stride_B] = result;
 }
 
-__global__ void dgemm_shared_kernel(int p, const double alpha, double *d_A, int lda, double *d_B, int ldb, double beta, double *d_C, int ldc, int stride_A, int stride_B, int stride_C) {
-    __shared__ double tile_A[TILE_WIDTH][TILE_HEIGHT];
-    __shared__ double tile_B[TILE_WIDTH][TILE_HEIGHT];
-
-    int x, y, k, row_a, row_c, memory_index_x, memory_index_y, idx, idy;
-    double alpha_a, result;
-
-    x = (blockIdx.x * blockDim.x) + threadIdx.x; // Column
-    y = (blockIdx.y * blockDim.y) + threadIdx.y; // Row
-    row_a = y*lda;
-    row_c = y*ldc;
-    result = d_C[row_c + x + stride_C]*beta;
-
-    memory_index_x = threadIdx.x;
-    memory_index_y = threadIdx.y;
-
-    // Iteramos por cada bloque en las filas de A y columnas de B
-    for(int step = 0; step < p; step+=32) {
-        idx = step + memory_index_x;
-        idy = step + memory_index_y;
-
-        // Los hilos guardan el bloque en memoria compartida
-        tile_A[memory_index_y][memory_index_x] = d_A[row_a + idx + stride_A];
-        tile_B[memory_index_y][memory_index_x] = d_B[idy*ldb + x + stride_B];
-        __syncthreads();
-
-        // Se opera acediendo a los bloques previamente guardados
-        for(k = 0; k < 32; ++k) {
-            alpha_a = alpha*tile_A[memory_index_y][k];
-            result += alpha_a*tile_B[k][memory_index_x];
-        }
-        // Se sincroniza para evitar que la memoria compartida sea editada mientras aún se usa para operar
-        __syncthreads();
-    }
-
-    d_C[row_c + x + stride_C] = result;
-}
-
+__global__ void dgemm_shared_kernel(int p, const double alpha, double *d_A, int lda, double *d_B, int ldb, double beta, double *d_C, int ldc, int stride_A, int stride_B, int stride_C);
 
 // Ej 2.2) Función para el caso 32k x n con los threads de un warp comunicandose a través de la mejor variante de 2.1
 // Acá la matriz triangular es de 32k x 32k, y podemos dividirla en k x k tiles de 32 x 32 elementos. Con:

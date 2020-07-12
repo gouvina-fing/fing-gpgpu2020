@@ -2,16 +2,14 @@
 
 // Producto de matrices. Usando doble presición.
 // C = βC + αA × B
-// (Si queremos restarle a C la multiplicación de Axb alpha se define como negativo)
 // 
 // lda, ldb y ldc tienen la cantidad de elementos por fila (width) de cada matriz (lda ≥ k, ldb ≥ n y ldc ≥ n)
 //      En gral A tiene tantas columnas como lda, B como ldb, etc. El sentido de los mismos es si queremos trabajar con submatrices.
 //      Ejemplo: A 1000x1000, B 1000x1000, C 100x100 C = A'*B' (Con A' y B' las sumatrices de 100x100 de arriba a la izq)
-//          m = 100, n = 100, p = 100, lda = 1000, ldb = 1000, ldc = 100
+//               m = 100, n = 100, p = 100, lda = 1000, ldb = 1000, ldc = 100
 void dgemm_cpu(int m, int n, int p, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc);
 
 // NOTE: Para la experimentación se usará lda = k, ldb = n, ldc = n, C = 0, alpha = beta = 1.
-//       Sin embargo para DTRSM importará una implementación genérica
 void dgemm_gpu(int algorithm, int m, int n, int p, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc);
 
 // Resolución de ecuaciones matriciales. Usando doble presición
@@ -25,18 +23,21 @@ void dgemm_gpu(int algorithm, int m, int n, int p, double alpha, double *A, int 
 // La operación es in-place (los resultados se devuelven en la matriz B)
 void dtrsm_gpu(int algorithm, int m, int n, double alpha, double *A, int lda, double *B, int ldb);
 
+// Operación de CuBlas que resuelve DTRSM. Tiene como precondición que A y B hayan sido previamente transpuestas
+// El resultado en B queda transpuesto y tiene que volver a transponerse.
 void dtrsm_cublas(int m, int n, const double *alpha, double *A, int lda, double *B, int ldb);
 
 int print_trace_format() {
     printf("Invocar como: './labgpu20.x algoritmo [tam1] [tam2] [tam3]'\n");
     printf("-> Algoritmo:\n");
+        printf("\t 0 - DGEMM CPU A (tam1 x tam2) B (tam2 x tam3)\n");
         printf("\t 1 - DGEMM en memoria global A (tam1 x tam2) B (tam2 x tam3)\n");
         printf("\t 2 - DGEMM con memoria compartida A (tam1 x tam2) B (tam2 x tam3)\n");
-        printf("\t 3 - DTRSM A (32 x 32) B (32 x tam1)\n");
+        printf("\t 3 - DTRSM TODO A (32 x 32) B (32 x tam1)\n");
         printf("\t 4 - DTRSM con bloques de k*32 recorriendo secuencialmente A (tam1 x tam1) B (tam1 x tam2)\n");
         printf("\t 5 - DTRSM versión recursiva A (tam1 x tam1) B (tam1 x tam2)\n");
         printf("\t 6 - DTRSM de la biblioteca CuBlas A (tam1 x tam1) B (tam1 x tam2)\n");
-        printf("\t 0 - Todos los algoritmos\n");
+        printf("\t 3 - DTRSM TODO A (32 x 32) B (32 x tam1)\n");
     return 1;
 }
 
@@ -45,6 +46,7 @@ void random_vector(double *A, int n) {
     for (unsigned int i = 0; i < n; ++i) A[i] = ((double)rand() / (double)RAND_MAX) + 0.1;
 }
 
+// Generates a vector of all zeroes
 void zero_vector(double *A, int n) {
     for (unsigned int i = 0; i < n; ++i) A[i] = 0;
 }
@@ -62,6 +64,7 @@ void print_matrix_from_vector(double * C, int m, int n) {
     printf("\n\n");
 }
 
+// Reserva la memoria e inicializa las matrices para DGEMM
 void inicializar_matrices_DGEMM(double **A, double **B, double **C, int m, int p, int n) {
     *A = (double*) malloc(m*p*sizeof(double));
     *B = (double*) malloc(p*n*sizeof(double));
@@ -73,6 +76,7 @@ void inicializar_matrices_DGEMM(double **A, double **B, double **C, int m, int p
     zero_vector(*C,m*n);
 }
 
+// Reserva la memoria e inicializa las matrices para DTRSM
 void inicializar_matrices_DTRSM(double **A, double **B, int m, int n) {
     *A = (double*) malloc(m*m*sizeof(double));
     *B = (double*) malloc(m*n*sizeof(double));

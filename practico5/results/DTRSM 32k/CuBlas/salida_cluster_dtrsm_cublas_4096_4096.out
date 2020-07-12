@@ -1,0 +1,89 @@
+Architecture:          x86_64
+CPU op-mode(s):        32-bit, 64-bit
+Byte Order:            Little Endian
+CPU(s):                40
+On-line CPU(s) list:   0-39
+Thread(s) per core:    1
+Core(s) per socket:    20
+Socket(s):             2
+NUMA node(s):          2
+Vendor ID:             GenuineIntel
+CPU family:            6
+Model:                 85
+Model name:            Intel(R) Xeon(R) Gold 6138 CPU @ 2.00GHz
+Stepping:              4
+CPU MHz:               3053.466
+CPU max MHz:           3700,0000
+CPU min MHz:           1000,0000
+BogoMIPS:              4000.00
+Virtualization:        VT-x
+L1d cache:             32K
+L1i cache:             32K
+L2 cache:              1024K
+L3 cache:              28160K
+NUMA node0 CPU(s):     0-19
+NUMA node1 CPU(s):     20-39
+Flags:                 fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc aperfmperf eagerfpu pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch epb cat_l3 cdp_l3 intel_ppin intel_pt ssbd mba ibrs ibpb stibp tpr_shadow vnmi flexpriority ept vpid fsgsbase tsc_adjust bmi1 hle avx2 smep bmi2 erms invpcid rtm cqm mpx rdt_a avx512f avx512dq rdseed adx smap clflushopt clwb avx512cd avx512bw avx512vl xsaveopt xsavec xgetbv1 cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local dtherm ida arat pln pts hwp hwp_act_window hwp_pkg_req pku ospke spec_ctrl intel_stibp flush_l1d
+Sun Jul 12 11:45:03 2020       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 396.44                 Driver Version: 396.44                    |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|===============================+======================+======================|
+|   0  Tesla P100-PCIE...  Off  | 00000000:37:00.0 Off |                    0 |
+| N/A   34C    P0    27W / 250W |      0MiB / 12198MiB |      0%      Default |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                       GPU Memory |
+|  GPU       PID   Type   Process name                             Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
+nvcc main.cpp dgemm.cu dtrsm.cu -o labgpu20.x -O3 -L/usr/X11R6/lib -lm -lpthread -lX11 -lcublas -arch=sm_60
+==17445== NVPROF is profiling process 17445, command: ./labgpu20.x 6 4096 4096 --benchmark -numdevices=1
+==17445== Profiling application: ./labgpu20.x 6 4096 4096 --benchmark -numdevices=1
+==17445== Profiling result:
+   Start  Duration            Grid Size      Block Size     Regs*    SSMem*    DSMem*      Size  Throughput  SrcMemType  DstMemType           Device   Context    Stream  Name
+1.07683s  1.3120us                    -               -         -         -         -      112B  81.411MB/s    Pageable      Device  Tesla P100-PCIE         1         7  [CUDA memcpy HtoD]
+1.07774s  29.884ms                    -               -         -         -         -  128.00MB  4.1829GB/s    Pageable      Device  Tesla P100-PCIE         1         7  [CUDA memcpy HtoD]
+1.10806s  29.339ms                    -               -         -         -         -  128.00MB  4.2606GB/s    Pageable      Device  Tesla P100-PCIE         1         7  [CUDA memcpy HtoD]
+1.13741s  651.68us            (512 1 1)        (32 8 1)        32  8.2500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  void kernel_trsm_l_mul32<double, int=8, bool=0, bool=0, bool=0, bool=0>(int, int, double const *, double const *, int, double*, int, double, int) [246]
+1.13806s  182.34us             (4 64 1)        (64 1 1)       240  16.500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  maxwell_dgemm_64x64_nn [273]
+1.13825s  643.90us            (512 1 1)        (32 8 1)        32  8.2500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  void kernel_trsm_l_mul32<double, int=8, bool=0, bool=0, bool=0, bool=0>(int, int, double const *, double const *, int, double*, int, double, int) [285]
+1.13889s  663.10us             (8 64 1)        (64 1 1)       240  16.500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  maxwell_dgemm_64x64_nn [312]
+1.13956s  648.06us            (512 1 1)        (32 8 1)        32  8.2500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  void kernel_trsm_l_mul32<double, int=8, bool=0, bool=0, bool=0, bool=0>(int, int, double const *, double const *, int, double*, int, double, int) [324]
+1.14020s  184.61us             (4 64 1)        (64 1 1)       240  16.500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  maxwell_dgemm_64x64_nn [351]
+1.14039s  650.46us            (512 1 1)        (32 8 1)        32  8.2500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  void kernel_trsm_l_mul32<double, int=8, bool=0, bool=0, bool=0, bool=0>(int, int, double const *, double const *, int, double*, int, double, int) [363]
+1.14104s  2.4759ms            (16 64 1)        (64 1 1)       240  16.500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  maxwell_dgemm_64x64_nn [390]
+1.14352s  653.08us            (512 1 1)        (32 8 1)        32  8.2500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  void kernel_trsm_l_mul32<double, int=8, bool=0, bool=0, bool=0, bool=0>(int, int, double const *, double const *, int, double*, int, double, int) [402]
+1.14417s  180.38us             (4 64 1)        (64 1 1)       240  16.500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  maxwell_dgemm_64x64_nn [429]
+1.14436s  604.92us            (512 1 1)        (32 8 1)        32  8.2500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  void kernel_trsm_l_mul32<double, int=8, bool=0, bool=0, bool=0, bool=0>(int, int, double const *, double const *, int, double*, int, double, int) [441]
+1.14496s  700.35us             (8 64 1)        (64 1 1)       240  16.500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  maxwell_dgemm_64x64_nn [468]
+1.14566s  645.69us            (512 1 1)        (32 8 1)        32  8.2500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  void kernel_trsm_l_mul32<double, int=8, bool=0, bool=0, bool=0, bool=0>(int, int, double const *, double const *, int, double*, int, double, int) [480]
+1.14631s  183.33us             (4 64 1)        (64 1 1)       240  16.500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  maxwell_dgemm_64x64_nn [507]
+1.14649s  647.74us            (512 1 1)        (32 8 1)        32  8.2500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  void kernel_trsm_l_mul32<double, int=8, bool=0, bool=0, bool=0, bool=0>(int, int, double const *, double const *, int, double*, int, double, int) [519]
+1.14714s  8.8295ms            (32 64 1)        (64 1 1)       240  16.500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  maxwell_dgemm_64x64_nn [546]
+1.15597s  643.07us            (512 1 1)        (32 8 1)        32  8.2500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  void kernel_trsm_l_mul32<double, int=8, bool=0, bool=0, bool=0, bool=0>(int, int, double const *, double const *, int, double*, int, double, int) [558]
+1.15662s  182.66us             (4 64 1)        (64 1 1)       240  16.500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  maxwell_dgemm_64x64_nn [585]
+1.15680s  642.43us            (512 1 1)        (32 8 1)        32  8.2500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  void kernel_trsm_l_mul32<double, int=8, bool=0, bool=0, bool=0, bool=0>(int, int, double const *, double const *, int, double*, int, double, int) [597]
+1.15745s  701.63us             (8 64 1)        (64 1 1)       240  16.500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  maxwell_dgemm_64x64_nn [624]
+1.15815s  656.25us            (512 1 1)        (32 8 1)        32  8.2500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  void kernel_trsm_l_mul32<double, int=8, bool=0, bool=0, bool=0, bool=0>(int, int, double const *, double const *, int, double*, int, double, int) [636]
+1.15881s  182.91us             (4 64 1)        (64 1 1)       240  16.500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  maxwell_dgemm_64x64_nn [663]
+1.15899s  690.78us            (512 1 1)        (32 8 1)        32  8.2500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  void kernel_trsm_l_mul32<double, int=8, bool=0, bool=0, bool=0, bool=0>(int, int, double const *, double const *, int, double*, int, double, int) [675]
+1.15968s  2.3051ms            (16 64 1)        (64 1 1)       240  16.500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  maxwell_dgemm_64x64_nn [702]
+1.16199s  1.3189ms            (512 1 1)        (32 8 1)        32  8.2500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  void kernel_trsm_l_mul32<double, int=8, bool=0, bool=0, bool=0, bool=0>(int, int, double const *, double const *, int, double*, int, double, int) [714]
+1.16331s  181.86us             (4 64 1)        (64 1 1)       240  16.500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  maxwell_dgemm_64x64_nn [741]
+1.16349s  1.3301ms            (512 1 1)        (32 8 1)        32  8.2500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  void kernel_trsm_l_mul32<double, int=8, bool=0, bool=0, bool=0, bool=0>(int, int, double const *, double const *, int, double*, int, double, int) [753]
+1.16482s  705.85us             (8 64 1)        (64 1 1)       240  16.500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  maxwell_dgemm_64x64_nn [780]
+1.16553s  1.4218ms            (512 1 1)        (32 8 1)        32  8.2500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  void kernel_trsm_l_mul32<double, int=8, bool=0, bool=0, bool=0, bool=0>(int, int, double const *, double const *, int, double*, int, double, int) [792]
+1.16695s  179.90us             (4 64 1)        (64 1 1)       240  16.500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  maxwell_dgemm_64x64_nn [819]
+1.16713s  1.3232ms            (512 1 1)        (32 8 1)        32  8.2500KB        0B         -           -           -           -  Tesla P100-PCIE         1         7  void kernel_trsm_l_mul32<double, int=8, bool=0, bool=0, bool=0, bool=0>(int, int, double const *, double const *, int, double*, int, double, int) [831]
+1.16846s  26.159ms                    -               -         -         -         -  128.00MB  4.7784GB/s      Device    Pageable  Tesla P100-PCIE         1         7  [CUDA memcpy DtoH]
+
+Regs: Number of registers used per CUDA thread. This number includes registers used internally by the CUDA driver and/or tools and can be more than what the compiler shows.
+SSMem: Static shared memory allocated per CUDA block.
+DSMem: Dynamic shared memory allocated per CUDA block.
+SrcMemType: The type of source memory accessed by memory operation/copy
+DstMemType: The type of destination memory accessed by memory operation/copy

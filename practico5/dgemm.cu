@@ -51,7 +51,7 @@ __global__ void dgemm_global_kernel(int p, const double alpha, double *d_A, int 
 // Asumimos que los tamaños del tile siempre son multiplos del tamaño de bloque
 // Capaz da peor que la de memoria global. Habría que usar la metrica de occupancy (y la de efficiency load/store y cantidad de accesos a mem global), si la memoria compartida es muy grande (porque double 32x32) pueden quedar ociosos
 //      Se puede probar variando el tamaño del bloque también
-__global__ void dgemm_shared_kernel(int p, const double alpha, double *d_A, int lda, double *d_B, int ldb, double beta, double *d_C, int ldc) {
+__global__ void dgemm_shared_kernel(int p, const double alpha, double *d_A, int lda, double *d_B, int ldb, double beta, double *d_C, int ldc, int stride_A, int stride_B, int stride_C) {
     __shared__ double tile_A[TILE_WIDTH][TILE_HEIGHT];
     __shared__ double tile_B[TILE_WIDTH][TILE_HEIGHT];
 
@@ -62,7 +62,7 @@ __global__ void dgemm_shared_kernel(int p, const double alpha, double *d_A, int 
     y = (blockIdx.y * blockDim.y) + threadIdx.y; // Row
     row_a = y*lda;
     row_c = y*ldc;
-    result = d_C[row_c + x]*beta;
+    result = d_C[row_c + x + stride_C]*beta;
 
     memory_index_x = threadIdx.x;
     memory_index_y = threadIdx.y;
@@ -73,8 +73,8 @@ __global__ void dgemm_shared_kernel(int p, const double alpha, double *d_A, int 
         idy = step + memory_index_y;
 
         // Los hilos guardan el bloque en memoria compartida
-        tile_A[memory_index_y][memory_index_x] = d_A[row_a + idx];
-        tile_B[memory_index_y][memory_index_x] = d_B[idy*ldb + x];
+        tile_A[memory_index_y][memory_index_x] = d_A[row_a + idx + stride_A];
+        tile_B[memory_index_y][memory_index_x] = d_B[idy*ldb + x + stride_B];
         __syncthreads();
 
         // Se opera acediendo a los bloques previamente guardados
@@ -86,7 +86,7 @@ __global__ void dgemm_shared_kernel(int p, const double alpha, double *d_A, int 
         __syncthreads();
     }
 
-    d_C[row_c + x] = result;
+    d_C[row_c + x + stride_C] = result;
 }
 
 void dgemm_gpu(int algorithm, int m, int n, int p, const double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc) {
@@ -124,7 +124,7 @@ void dgemm_gpu(int algorithm, int m, int n, int p, const double alpha, double *A
             dgemm_global_kernel<<<tamGrid, tamBlock>>>(p, alpha, device_A, lda, device_B, ldb, beta, device_C, ldc);
             break;
         case 2:
-            dgemm_shared_kernel<<<tamGrid, tamBlock>>>(p, alpha, device_A, lda, device_B, ldb, beta, device_C, ldc);
+            dgemm_shared_kernel<<<tamGrid, tamBlock>>>(p, alpha, device_A, lda, device_B, ldb, beta, device_C, ldc, 0, 0, 0);
     }
     cudaDeviceSynchronize();
 
