@@ -1,4 +1,4 @@
-# -arch=sm_75 Turing 1660 y 1660S
+# -arch=sm_75 Turing GTX 1660 y GTX 1660S
 # -arch=sm_60 Pascal P-100
 
 all:
